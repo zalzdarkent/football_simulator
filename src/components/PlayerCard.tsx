@@ -1,6 +1,6 @@
 import { clubById } from "../data/clubs";
 import { countryByCode } from "../data/countries";
-import { POSITION_LABEL } from "../lib/sim/attributes";
+import { POSITION_LABEL } from "../lib/sim/types";
 import type { Save } from "../lib/sim/types";
 
 type Props = {
