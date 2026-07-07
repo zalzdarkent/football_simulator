@@ -9,38 +9,212 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as NewRouteImport } from './routes/new'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardTrophiesRouteImport } from './routes/dashboard.trophies'
+import { Route as DashboardTransfersRouteImport } from './routes/dashboard.transfers'
+import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
+import { Route as DashboardSocialRouteImport } from './routes/dashboard.social'
+import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as DashboardSeasonEndRouteImport } from './routes/dashboard.season-end'
+import { Route as DashboardNewsRouteImport } from './routes/dashboard.news'
+import { Route as DashboardMatchRouteImport } from './routes/dashboard.match'
+import { Route as DashboardLeaderboardRouteImport } from './routes/dashboard.leaderboard'
+import { Route as DashboardJourneyRouteImport } from './routes/dashboard.journey'
 
+const NewRoute = NewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTrophiesRoute = DashboardTrophiesRouteImport.update({
+  id: '/trophies',
+  path: '/trophies',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTransfersRoute = DashboardTransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardStatsRoute = DashboardStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSocialRoute = DashboardSocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSeasonEndRoute = DashboardSeasonEndRouteImport.update({
+  id: '/season-end',
+  path: '/season-end',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardNewsRoute = DashboardNewsRouteImport.update({
+  id: '/news',
+  path: '/news',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMatchRoute = DashboardMatchRouteImport.update({
+  id: '/match',
+  path: '/match',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLeaderboardRoute = DashboardLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardJourneyRoute = DashboardJourneyRouteImport.update({
+  id: '/journey',
+  path: '/journey',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/new': typeof NewRoute
+  '/dashboard/journey': typeof DashboardJourneyRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
+  '/dashboard/match': typeof DashboardMatchRoute
+  '/dashboard/news': typeof DashboardNewsRoute
+  '/dashboard/season-end': typeof DashboardSeasonEndRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/dashboard/transfers': typeof DashboardTransfersRoute
+  '/dashboard/trophies': typeof DashboardTrophiesRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/new': typeof NewRoute
+  '/dashboard/journey': typeof DashboardJourneyRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
+  '/dashboard/match': typeof DashboardMatchRoute
+  '/dashboard/news': typeof DashboardNewsRoute
+  '/dashboard/season-end': typeof DashboardSeasonEndRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/dashboard/transfers': typeof DashboardTransfersRoute
+  '/dashboard/trophies': typeof DashboardTrophiesRoute
+  '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/new': typeof NewRoute
+  '/dashboard/journey': typeof DashboardJourneyRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
+  '/dashboard/match': typeof DashboardMatchRoute
+  '/dashboard/news': typeof DashboardNewsRoute
+  '/dashboard/season-end': typeof DashboardSeasonEndRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/dashboard/transfers': typeof DashboardTransfersRoute
+  '/dashboard/trophies': typeof DashboardTrophiesRoute
+  '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/new'
+    | '/dashboard/journey'
+    | '/dashboard/leaderboard'
+    | '/dashboard/match'
+    | '/dashboard/news'
+    | '/dashboard/season-end'
+    | '/dashboard/settings'
+    | '/dashboard/social'
+    | '/dashboard/stats'
+    | '/dashboard/transfers'
+    | '/dashboard/trophies'
+    | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/new'
+    | '/dashboard/journey'
+    | '/dashboard/leaderboard'
+    | '/dashboard/match'
+    | '/dashboard/news'
+    | '/dashboard/season-end'
+    | '/dashboard/settings'
+    | '/dashboard/social'
+    | '/dashboard/stats'
+    | '/dashboard/transfers'
+    | '/dashboard/trophies'
+    | '/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/new'
+    | '/dashboard/journey'
+    | '/dashboard/leaderboard'
+    | '/dashboard/match'
+    | '/dashboard/news'
+    | '/dashboard/season-end'
+    | '/dashboard/settings'
+    | '/dashboard/social'
+    | '/dashboard/stats'
+    | '/dashboard/transfers'
+    | '/dashboard/trophies'
+    | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
+  NewRoute: typeof NewRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/new': {
+      id: '/new'
+      path: '/new'
+      fullPath: '/new'
+      preLoaderRoute: typeof NewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +222,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/trophies': {
+      id: '/dashboard/trophies'
+      path: '/trophies'
+      fullPath: '/dashboard/trophies'
+      preLoaderRoute: typeof DashboardTrophiesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/transfers': {
+      id: '/dashboard/transfers'
+      path: '/transfers'
+      fullPath: '/dashboard/transfers'
+      preLoaderRoute: typeof DashboardTransfersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/stats': {
+      id: '/dashboard/stats'
+      path: '/stats'
+      fullPath: '/dashboard/stats'
+      preLoaderRoute: typeof DashboardStatsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/social': {
+      id: '/dashboard/social'
+      path: '/social'
+      fullPath: '/dashboard/social'
+      preLoaderRoute: typeof DashboardSocialRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/settings': {
+      id: '/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/season-end': {
+      id: '/dashboard/season-end'
+      path: '/season-end'
+      fullPath: '/dashboard/season-end'
+      preLoaderRoute: typeof DashboardSeasonEndRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/news': {
+      id: '/dashboard/news'
+      path: '/news'
+      fullPath: '/dashboard/news'
+      preLoaderRoute: typeof DashboardNewsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/match': {
+      id: '/dashboard/match'
+      path: '/match'
+      fullPath: '/dashboard/match'
+      preLoaderRoute: typeof DashboardMatchRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/leaderboard': {
+      id: '/dashboard/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/dashboard/leaderboard'
+      preLoaderRoute: typeof DashboardLeaderboardRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/journey': {
+      id: '/dashboard/journey'
+      path: '/journey'
+      fullPath: '/dashboard/journey'
+      preLoaderRoute: typeof DashboardJourneyRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardJourneyRoute: typeof DashboardJourneyRoute
+  DashboardLeaderboardRoute: typeof DashboardLeaderboardRoute
+  DashboardMatchRoute: typeof DashboardMatchRoute
+  DashboardNewsRoute: typeof DashboardNewsRoute
+  DashboardSeasonEndRoute: typeof DashboardSeasonEndRoute
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardSocialRoute: typeof DashboardSocialRoute
+  DashboardStatsRoute: typeof DashboardStatsRoute
+  DashboardTransfersRoute: typeof DashboardTransfersRoute
+  DashboardTrophiesRoute: typeof DashboardTrophiesRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardJourneyRoute: DashboardJourneyRoute,
+  DashboardLeaderboardRoute: DashboardLeaderboardRoute,
+  DashboardMatchRoute: DashboardMatchRoute,
+  DashboardNewsRoute: DashboardNewsRoute,
+  DashboardSeasonEndRoute: DashboardSeasonEndRoute,
+  DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardSocialRoute: DashboardSocialRoute,
+  DashboardStatsRoute: DashboardStatsRoute,
+  DashboardTransfersRoute: DashboardTransfersRoute,
+  DashboardTrophiesRoute: DashboardTrophiesRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRouteWithChildren,
+  NewRoute: NewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
