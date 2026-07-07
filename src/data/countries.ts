@@ -1,0 +1,43 @@
+export type Country = { code: string; name: string; flag: string };
+
+export const COUNTRIES: Country[] = [
+  { code: "AR", name: "Argentina", flag: "🇦🇷" },
+  { code: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "AT", name: "Austria", flag: "🇦🇹" },
+  { code: "BE", name: "Belgium", flag: "🇧🇪" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "CM", name: "Cameroon", flag: "🇨🇲" },
+  { code: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "CL", name: "Chile", flag: "🇨🇱" },
+  { code: "CO", name: "Colombia", flag: "🇨🇴" },
+  { code: "HR", name: "Croatia", flag: "🇭🇷" },
+  { code: "DK", name: "Denmark", flag: "🇩🇰" },
+  { code: "EG", name: "Egypt", flag: "🇪🇬" },
+  { code: "EN", name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { code: "FR", name: "France", flag: "🇫🇷" },
+  { code: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "GH", name: "Ghana", flag: "🇬🇭" },
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "MA", name: "Morocco", flag: "🇲🇦" },
+  { code: "NL", name: "Netherlands", flag: "🇳🇱" },
+  { code: "NG", name: "Nigeria", flag: "🇳🇬" },
+  { code: "NO", name: "Norway", flag: "🇳🇴" },
+  { code: "PL", name: "Poland", flag: "🇵🇱" },
+  { code: "PT", name: "Portugal", flag: "🇵🇹" },
+  { code: "SN", name: "Senegal", flag: "🇸🇳" },
+  { code: "RS", name: "Serbia", flag: "🇷🇸" },
+  { code: "SC", name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  { code: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "SE", name: "Sweden", flag: "🇸🇪" },
+  { code: "CH", name: "Switzerland", flag: "🇨🇭" },
+  { code: "TR", name: "Turkey", flag: "🇹🇷" },
+  { code: "UY", name: "Uruguay", flag: "🇺🇾" },
+  { code: "US", name: "United States", flag: "🇺🇸" },
+];
+
+export const countryByCode = (code: string) =>
+  COUNTRIES.find((c) => c.code === code);
