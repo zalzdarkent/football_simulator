@@ -13,7 +13,16 @@ import { Route as NewRouteImport } from './routes/new'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardTrophiesRouteImport } from './routes/dashboard.trophies'
+import { Route as DashboardTransfersRouteImport } from './routes/dashboard.transfers'
+import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
+import { Route as DashboardSocialRouteImport } from './routes/dashboard.social'
+import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as DashboardSeasonEndRouteImport } from './routes/dashboard.season-end'
+import { Route as DashboardNewsRouteImport } from './routes/dashboard.news'
 import { Route as DashboardMatchRouteImport } from './routes/dashboard.match'
+import { Route as DashboardLeaderboardRouteImport } from './routes/dashboard.leaderboard'
+import { Route as DashboardJourneyRouteImport } from './routes/dashboard.journey'
 
 const NewRoute = NewRouteImport.update({
   id: '/new',
@@ -35,9 +44,54 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardTrophiesRoute = DashboardTrophiesRouteImport.update({
+  id: '/trophies',
+  path: '/trophies',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTransfersRoute = DashboardTransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardStatsRoute = DashboardStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSocialRoute = DashboardSocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSeasonEndRoute = DashboardSeasonEndRouteImport.update({
+  id: '/season-end',
+  path: '/season-end',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardNewsRoute = DashboardNewsRouteImport.update({
+  id: '/news',
+  path: '/news',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardMatchRoute = DashboardMatchRouteImport.update({
   id: '/match',
   path: '/match',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLeaderboardRoute = DashboardLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardJourneyRoute = DashboardJourneyRouteImport.update({
+  id: '/journey',
+  path: '/journey',
   getParentRoute: () => DashboardRoute,
 } as any)
 
@@ -45,13 +99,31 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/new': typeof NewRoute
+  '/dashboard/journey': typeof DashboardJourneyRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/match': typeof DashboardMatchRoute
+  '/dashboard/news': typeof DashboardNewsRoute
+  '/dashboard/season-end': typeof DashboardSeasonEndRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/dashboard/transfers': typeof DashboardTransfersRoute
+  '/dashboard/trophies': typeof DashboardTrophiesRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/new': typeof NewRoute
+  '/dashboard/journey': typeof DashboardJourneyRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/match': typeof DashboardMatchRoute
+  '/dashboard/news': typeof DashboardNewsRoute
+  '/dashboard/season-end': typeof DashboardSeasonEndRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/dashboard/transfers': typeof DashboardTransfersRoute
+  '/dashboard/trophies': typeof DashboardTrophiesRoute
   '/dashboard': typeof DashboardIndexRoute
 }
 export interface FileRoutesById {
@@ -59,20 +131,65 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/new': typeof NewRoute
+  '/dashboard/journey': typeof DashboardJourneyRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/match': typeof DashboardMatchRoute
+  '/dashboard/news': typeof DashboardNewsRoute
+  '/dashboard/season-end': typeof DashboardSeasonEndRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
+  '/dashboard/transfers': typeof DashboardTransfersRoute
+  '/dashboard/trophies': typeof DashboardTrophiesRoute
   '/dashboard/': typeof DashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/new' | '/dashboard/match' | '/dashboard/'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/new'
+    | '/dashboard/journey'
+    | '/dashboard/leaderboard'
+    | '/dashboard/match'
+    | '/dashboard/news'
+    | '/dashboard/season-end'
+    | '/dashboard/settings'
+    | '/dashboard/social'
+    | '/dashboard/stats'
+    | '/dashboard/transfers'
+    | '/dashboard/trophies'
+    | '/dashboard/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/new' | '/dashboard/match' | '/dashboard'
+  to:
+    | '/'
+    | '/new'
+    | '/dashboard/journey'
+    | '/dashboard/leaderboard'
+    | '/dashboard/match'
+    | '/dashboard/news'
+    | '/dashboard/season-end'
+    | '/dashboard/settings'
+    | '/dashboard/social'
+    | '/dashboard/stats'
+    | '/dashboard/transfers'
+    | '/dashboard/trophies'
+    | '/dashboard'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
     | '/new'
+    | '/dashboard/journey'
+    | '/dashboard/leaderboard'
     | '/dashboard/match'
+    | '/dashboard/news'
+    | '/dashboard/season-end'
+    | '/dashboard/settings'
+    | '/dashboard/social'
+    | '/dashboard/stats'
+    | '/dashboard/transfers'
+    | '/dashboard/trophies'
     | '/dashboard/'
   fileRoutesById: FileRoutesById
 }
@@ -112,6 +229,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/trophies': {
+      id: '/dashboard/trophies'
+      path: '/trophies'
+      fullPath: '/dashboard/trophies'
+      preLoaderRoute: typeof DashboardTrophiesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/transfers': {
+      id: '/dashboard/transfers'
+      path: '/transfers'
+      fullPath: '/dashboard/transfers'
+      preLoaderRoute: typeof DashboardTransfersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/stats': {
+      id: '/dashboard/stats'
+      path: '/stats'
+      fullPath: '/dashboard/stats'
+      preLoaderRoute: typeof DashboardStatsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/social': {
+      id: '/dashboard/social'
+      path: '/social'
+      fullPath: '/dashboard/social'
+      preLoaderRoute: typeof DashboardSocialRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/settings': {
+      id: '/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/season-end': {
+      id: '/dashboard/season-end'
+      path: '/season-end'
+      fullPath: '/dashboard/season-end'
+      preLoaderRoute: typeof DashboardSeasonEndRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/news': {
+      id: '/dashboard/news'
+      path: '/news'
+      fullPath: '/dashboard/news'
+      preLoaderRoute: typeof DashboardNewsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/match': {
       id: '/dashboard/match'
       path: '/match'
@@ -119,16 +285,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardMatchRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/leaderboard': {
+      id: '/dashboard/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/dashboard/leaderboard'
+      preLoaderRoute: typeof DashboardLeaderboardRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/journey': {
+      id: '/dashboard/journey'
+      path: '/journey'
+      fullPath: '/dashboard/journey'
+      preLoaderRoute: typeof DashboardJourneyRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
 interface DashboardRouteChildren {
+  DashboardJourneyRoute: typeof DashboardJourneyRoute
+  DashboardLeaderboardRoute: typeof DashboardLeaderboardRoute
   DashboardMatchRoute: typeof DashboardMatchRoute
+  DashboardNewsRoute: typeof DashboardNewsRoute
+  DashboardSeasonEndRoute: typeof DashboardSeasonEndRoute
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardSocialRoute: typeof DashboardSocialRoute
+  DashboardStatsRoute: typeof DashboardStatsRoute
+  DashboardTransfersRoute: typeof DashboardTransfersRoute
+  DashboardTrophiesRoute: typeof DashboardTrophiesRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardJourneyRoute: DashboardJourneyRoute,
+  DashboardLeaderboardRoute: DashboardLeaderboardRoute,
   DashboardMatchRoute: DashboardMatchRoute,
+  DashboardNewsRoute: DashboardNewsRoute,
+  DashboardSeasonEndRoute: DashboardSeasonEndRoute,
+  DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardSocialRoute: DashboardSocialRoute,
+  DashboardStatsRoute: DashboardStatsRoute,
+  DashboardTransfersRoute: DashboardTransfersRoute,
+  DashboardTrophiesRoute: DashboardTrophiesRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 
