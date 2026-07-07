@@ -197,6 +197,11 @@ function applyMatchResult(
         ratingSum: cs.ratingSum + (isApp ? rolled.result.rating : 0),
         ratingCount: cs.ratingCount + (isApp ? 1 : 0),
         motm: cs.motm + (rolled.result.motm ? 1 : 0),
+        teamWins: (cs.teamWins || 0) + (rolled.result.teamResult === "W" ? 1 : 0),
+        teamDraws: (cs.teamDraws || 0) + (rolled.result.teamResult === "D" ? 1 : 0),
+        teamLosses: (cs.teamLosses || 0) + (rolled.result.teamResult === "L" ? 1 : 0),
+        teamGoalsFor: (cs.teamGoalsFor || 0) + rolled.result.goalsFor,
+        teamGoalsAgainst: (cs.teamGoalsAgainst || 0) + rolled.result.goalsAgainst,
       };
       const milestones: MilestoneRecord[] = [...sv.milestones];
       const careerGoals = sv.careerStats.goals + rolled.result.goals;

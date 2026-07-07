@@ -118,6 +118,18 @@ export const CLUBS: Club[] = [
   c("feyenoord", "Feyenoord", "FEY", "eredivisie", "Rotterdam", 2, 80, ["#CC0000", "#FFFFFF"]),
   c("az", "AZ Alkmaar", "AZ", "eredivisie", "Alkmaar", 4, 68, ["#DA291C", "#FFFFFF"]),
   c("twente", "FC Twente", "TWE", "eredivisie", "Enschede", 4, 66, ["#DA291C", "#FFFFFF"]),
+  c("utrecht", "FC Utrecht", "UTR", "eredivisie", "Utrecht", 4, 65, ["#DA291C", "#FFFFFF"]),
+  c("heerenveen", "sc Heerenveen", "HEE", "eredivisie", "Heerenveen", 4, 64, ["#005CA9", "#FFFFFF"]),
+  c("sparta", "Sparta Rotterdam", "SPA", "eredivisie", "Rotterdam", 4, 64, ["#DA291C", "#FFFFFF"]),
+  c("nec", "NEC Nijmegen", "NEC", "eredivisie", "Nijmegen", 5, 62, ["#000000", "#DA291C"]),
+  c("gae", "Go Ahead Eagles", "GAE", "eredivisie", "Deventer", 5, 61, ["#DA291C", "#FFD700"]),
+  c("fortuna", "Fortuna Sittard", "FOR", "eredivisie", "Sittard", 5, 61, ["#FFD700", "#008000"]),
+  c("rkc", "RKC Waalwijk", "RKC", "eredivisie", "Waalwijk", 5, 60, ["#FFD700", "#000000"]),
+  c("volendam", "FC Volendam", "VOL", "eredivisie", "Volendam", 5, 59, ["#FF7F00", "#000000"]),
+  c("almere", "Almere City", "ALM", "eredivisie", "Almere", 5, 58, ["#DA291C", "#FFFFFF"]),
+  c("pec", "PEC Zwolle", "PEC", "eredivisie", "Zwolle", 5, 60, ["#005CA9", "#FFFFFF"]),
+  c("heracles", "Heracles", "HER", "eredivisie", "Almelo", 5, 60, ["#000000", "#FFFFFF"]),
+  c("excelsior", "Excelsior", "EXC", "eredivisie", "Rotterdam", 5, 58, ["#000000", "#DA291C"]),
 
   // Liga PT
   c("benfica", "Benfica", "SLB", "liga-pt", "Lisbon", 2, 84, ["#E30613", "#FFFFFF"]),

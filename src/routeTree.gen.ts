@@ -16,6 +16,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardTrophiesRouteImport } from './routes/dashboard.trophies'
 import { Route as DashboardTransfersRouteImport } from './routes/dashboard.transfers'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
+import { Route as DashboardStandingsRouteImport } from './routes/dashboard.standings'
 import { Route as DashboardSocialRouteImport } from './routes/dashboard.social'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardSeasonEndRouteImport } from './routes/dashboard.season-end'
@@ -57,6 +58,11 @@ const DashboardTransfersRoute = DashboardTransfersRouteImport.update({
 const DashboardStatsRoute = DashboardStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardStandingsRoute = DashboardStandingsRouteImport.update({
+  id: '/standings',
+  path: '/standings',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSocialRoute = DashboardSocialRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/season-end': typeof DashboardSeasonEndRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/standings': typeof DashboardStandingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/transfers': typeof DashboardTransfersRoute
   '/dashboard/trophies': typeof DashboardTrophiesRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/dashboard/season-end': typeof DashboardSeasonEndRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/standings': typeof DashboardStandingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/transfers': typeof DashboardTransfersRoute
   '/dashboard/trophies': typeof DashboardTrophiesRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/dashboard/season-end': typeof DashboardSeasonEndRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/social': typeof DashboardSocialRoute
+  '/dashboard/standings': typeof DashboardStandingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/transfers': typeof DashboardTransfersRoute
   '/dashboard/trophies': typeof DashboardTrophiesRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/dashboard/season-end'
     | '/dashboard/settings'
     | '/dashboard/social'
+    | '/dashboard/standings'
     | '/dashboard/stats'
     | '/dashboard/transfers'
     | '/dashboard/trophies'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/dashboard/season-end'
     | '/dashboard/settings'
     | '/dashboard/social'
+    | '/dashboard/standings'
     | '/dashboard/stats'
     | '/dashboard/transfers'
     | '/dashboard/trophies'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/dashboard/season-end'
     | '/dashboard/settings'
     | '/dashboard/social'
+    | '/dashboard/standings'
     | '/dashboard/stats'
     | '/dashboard/transfers'
     | '/dashboard/trophies'
@@ -250,6 +262,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardStatsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/standings': {
+      id: '/dashboard/standings'
+      path: '/standings'
+      fullPath: '/dashboard/standings'
+      preLoaderRoute: typeof DashboardStandingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/social': {
       id: '/dashboard/social'
       path: '/social'
@@ -310,6 +329,7 @@ interface DashboardRouteChildren {
   DashboardSeasonEndRoute: typeof DashboardSeasonEndRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardSocialRoute: typeof DashboardSocialRoute
+  DashboardStandingsRoute: typeof DashboardStandingsRoute
   DashboardStatsRoute: typeof DashboardStatsRoute
   DashboardTransfersRoute: typeof DashboardTransfersRoute
   DashboardTrophiesRoute: typeof DashboardTrophiesRoute
@@ -324,6 +344,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardSeasonEndRoute: DashboardSeasonEndRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardSocialRoute: DashboardSocialRoute,
+  DashboardStandingsRoute: DashboardStandingsRoute,
   DashboardStatsRoute: DashboardStatsRoute,
   DashboardTransfersRoute: DashboardTransfersRoute,
   DashboardTrophiesRoute: DashboardTrophiesRoute,
@@ -342,3 +363,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -1,4 +1,4 @@
-import { chance, pick, range, uid, weighted, type RNG } from "./rng";
+import { chance, pick, range, uid, weighted, mulberry32, type RNG } from "./rng";
 import type { MatchSpinResult, NewsItem, Position, Save, SocialPost } from "./types";
 import { CLUBS, clubById, clubsByLeague, type Club } from "../../data/clubs";
 import { NEWS, SOCIAL } from "../../data/templates";
@@ -26,9 +26,14 @@ const ASSIST_BASE: Record<Position, number> = {
 };
 
 export function rollMatch(save: Save, rng: RNG): { result: MatchSpinResult; news: NewsItem; social?: SocialPost } {
+  const str = save.id + save.season.index + save.season.matchday;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+  const fixedRng = mulberry32(hash);
+
   const club = clubById(save.currentClub.clubId)!;
-  const opp = pickOpponent(save, rng);
-  const home = chance(0.5, rng);
+  const opp = pickOpponent(save, fixedRng);
+  const home = chance(0.5, fixedRng);
   const pos = save.player.position;
   const ovr = save.attributes.overall;
 
@@ -166,7 +171,11 @@ function mkNews(save: Save, r: MatchSpinResult, key: keyof typeof NEWS, rng: RNG
 
 // Fixture generation for preview UI: pick opponent deterministically? We use rng.
 export function previewOpponent(save: Save, rng: RNG): Club {
-  return pickOpponent(save, rng);
+  const str = save.id + save.season.index + save.season.matchday;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+  const fixedRng = mulberry32(hash);
+  return pickOpponent(save, fixedRng);
 }
 
 export function _unusedWeighted() { return weighted; }

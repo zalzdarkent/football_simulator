@@ -32,6 +32,11 @@ export type SeasonStats = {
   ratingSum: number;
   ratingCount: number;
   motm: number;
+  teamWins?: number;
+  teamDraws?: number;
+  teamLosses?: number;
+  teamGoalsFor?: number;
+  teamGoalsAgainst?: number;
 };
 
 export type CareerSeasonRecord = {
@@ -197,4 +202,5 @@ export type Save = {
 export const emptySeasonStats = (): SeasonStats => ({
   apps: 0, starts: 0, goals: 0, assists: 0, cleanSheets: 0,
   yellows: 0, reds: 0, ratingSum: 0, ratingCount: 0, motm: 0,
+  teamWins: 0, teamDraws: 0, teamLosses: 0, teamGoalsFor: 0, teamGoalsAgainst: 0,
 });
