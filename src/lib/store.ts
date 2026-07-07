@@ -27,7 +27,7 @@ type Store = {
 
   // spin flow
   previewMatch: (saveId: string) => { result: MatchSpinResult; news: NewsItem; social?: SocialPost; opponentName: string } | null;
-  confirmMatch: (saveId: string) => void;
+  confirmMatch: (saveId: string, rolled: { result: MatchSpinResult; news: NewsItem; social?: SocialPost }) => void;
   clearPending: (saveId: string) => void;
 
   previewSeasonEnd: (saveId: string) => SeasonEndResult | null;
