@@ -47,7 +47,8 @@ function MatchSpin() {
   };
 
   const confirm = () => {
-    confirmMatch(save.id);
+    if (!preview) return;
+    confirmMatch(save.id, preview);
     setPreview(null);
     setReveal(0);
     navigate({ to: "/dashboard" });
