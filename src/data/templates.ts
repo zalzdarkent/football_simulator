@@ -27,6 +27,10 @@ export const NEWS = {
   draw: [
     "{club} vs {opp} berbagi angka. Poin dibagi rata.",
   ],
+  win: [
+    "{club} kalahkan {opp} dan amankan 3 poin penting.",
+    "Kemenangan penting: {club} menang atas {opp}.",
+  ],
   benched: [
     "{player} tak masuk skuad {club} kontra {opp}.",
     "Manajer {club} istirahatkan {player} untuk laga lawan {opp}.",

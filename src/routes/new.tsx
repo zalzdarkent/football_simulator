@@ -52,9 +52,9 @@ function NewCareer() {
     };
   }, [name, countryCode, position, age, height, foot, clubId]);
 
-  const submit = () => {
+  const submit = async () => {
     if (!name.trim()) return;
-    createSave({ name, countryCode, position, age, height, foot, clubId });
+    await createSave({ name, countryCode, position, age, height, foot, clubId });
     navigate({ to: "/dashboard" });
   };
 

@@ -73,6 +73,10 @@ export const CLUBS: Club[] = [
   c("celta", "Celta Vigo", "CEL", "laliga", "Vigo", 4, 68, ["#8AC8E4", "#FFFFFF"]),
   c("mallorca", "RCD Mallorca", "MLL", "laliga", "Palma", 4, 66, ["#CC0000", "#FFCC00"]),
   c("osasuna", "Osasuna", "OSA", "laliga", "Pamplona", 4, 66, ["#DA291C", "#0032A0"]),
+  c("rayo", "Rayo Vallecano", "RAY", "laliga", "Madrid", 4, 65, ["#0033A0", "#FF0000"]),
+  c("getafe", "Getafe CF", "GET", "laliga", "Getafe", 4, 64, ["#005CA9", "#FFFFFF"]),
+  c("almeria", "UD Almería", "ALM", "laliga", "Almería", 4, 63, ["#CC0000", "#FFFFFF"]),
+  c("cadiz", "Cádiz CF", "CAD", "laliga", "Cádiz", 4, 62, ["#FDE607", "#000000"]),
 
   // Serie A
   c("inter", "Inter Milan", "INT", "seriea", "Milan", 1, 92, ["#010E80", "#000000"]),
@@ -87,6 +91,11 @@ export const CLUBS: Club[] = [
   c("torino", "Torino", "TOR", "seriea", "Turin", 4, 70, ["#8B1A1A", "#FFFFFF"]),
   c("genoa", "Genoa", "GEN", "seriea", "Genoa", 4, 68, ["#A6192E", "#001489"]),
   c("udinese", "Udinese", "UDI", "seriea", "Udine", 4, 66, ["#000000", "#FFFFFF"]),
+  c("sassuolo", "Sassuolo", "SAS", "seriea", "Sassuolo", 4, 65, ["#0067B1", "#000000"]),
+  c("monza", "Monza", "MON", "seriea", "Monza", 4, 64, ["#DA291C", "#FFFFFF"]),
+  c("empoli", "Empoli", "EMP", "seriea", "Empoli", 4, 62, ["#005CA9", "#FFFFFF"]),
+  c("lecce", "US Lecce", "LEC", "seriea", "Lecce", 4, 61, ["#FFCD00", "#000000"]),
+  c("verona", "Hellas Verona", "VER", "seriea", "Verona", 4, 60, ["#FFED00", "#000000"]),
 
   // Bundesliga
   c("bayern", "Bayern Munich", "BAY", "bundesliga", "Munich", 1, 94, ["#DC052D", "#FFFFFF"]),
@@ -100,6 +109,11 @@ export const CLUBS: Club[] = [
   c("hoffenheim", "TSG Hoffenheim", "TSG", "bundesliga", "Sinsheim", 4, 68, ["#1961B5", "#FFFFFF"]),
   c("mainz", "Mainz 05", "M05", "bundesliga", "Mainz", 4, 66, ["#C3141E", "#FFFFFF"]),
   c("werder", "Werder Bremen", "SVW", "bundesliga", "Bremen", 4, 66, ["#1D9053", "#FFFFFF"]),
+  c("freiburg", "SC Freiburg", "SCF", "bundesliga", "Freiburg", 4, 68, ["#000000", "#FFFFFF"]),
+  c("koln", "FC Köln", "KOL", "bundesliga", "Cologne", 4, 65, ["#FFFFFF", "#E1000F"]),
+  c("augsburg", "FC Augsburg", "FCA", "bundesliga", "Augsburg", 4, 64, ["#E32219", "#FFFFFF"]),
+  c("bochum", "VfL Bochum", "BOC", "bundesliga", "Bochum", 4, 62, ["#005CA9", "#FFFFFF"]),
+  c("darmstadt", "Darmstadt 98", "D98", "bundesliga", "Darmstadt", 4, 60, ["#005CA9", "#FFFFFF"]),
 
   // Ligue 1
   c("psg", "Paris Saint-Germain", "PSG", "ligue1", "Paris", 1, 93, ["#004170", "#DA291C"]),
@@ -111,6 +125,11 @@ export const CLUBS: Club[] = [
   c("rennes", "Stade Rennais", "REN", "ligue1", "Rennes", 3, 72, ["#DA291C", "#000000"]),
   c("lens", "RC Lens", "RCL", "ligue1", "Lens", 4, 70, ["#FDDA24", "#DA291C"]),
   c("nantes", "FC Nantes", "NAN", "ligue1", "Nantes", 4, 66, ["#FDDA24", "#0F5A28"]),
+  c("montpellier", "Montpellier", "MON", "ligue1", "Montpellier", 4, 68, ["#005CA9", "#FFFFFF"]),
+  c("strasbourg", "Strasbourg", "STR", "ligue1", "Strasbourg", 4, 65, ["#005CA9", "#E1000F"]),
+  c("toulouse", "Toulouse FC", "TOU", "ligue1", "Toulouse", 4, 64, ["#E1000F", "#FFFFFF"]),
+  c("brest", "Stade Brestois", "BRE", "ligue1", "Brest", 4, 62, ["#E1000F", "#FFFFFF"]),
+  c("reims", "Stade Reims", "REI", "ligue1", "Reims", 4, 60, ["#E1000F", "#FFFFFF"]),
 
   // Eredivisie
   c("ajax", "Ajax", "AJA", "eredivisie", "Amsterdam", 2, 82, ["#D2122E", "#FFFFFF"]),
@@ -121,15 +140,15 @@ export const CLUBS: Club[] = [
   c("utrecht", "FC Utrecht", "UTR", "eredivisie", "Utrecht", 4, 65, ["#DA291C", "#FFFFFF"]),
   c("heerenveen", "sc Heerenveen", "HEE", "eredivisie", "Heerenveen", 4, 64, ["#005CA9", "#FFFFFF"]),
   c("sparta", "Sparta Rotterdam", "SPA", "eredivisie", "Rotterdam", 4, 64, ["#DA291C", "#FFFFFF"]),
-  c("nec", "NEC Nijmegen", "NEC", "eredivisie", "Nijmegen", 5, 62, ["#000000", "#DA291C"]),
-  c("gae", "Go Ahead Eagles", "GAE", "eredivisie", "Deventer", 5, 61, ["#DA291C", "#FFD700"]),
-  c("fortuna", "Fortuna Sittard", "FOR", "eredivisie", "Sittard", 5, 61, ["#FFD700", "#008000"]),
-  c("rkc", "RKC Waalwijk", "RKC", "eredivisie", "Waalwijk", 5, 60, ["#FFD700", "#000000"]),
-  c("volendam", "FC Volendam", "VOL", "eredivisie", "Volendam", 5, 59, ["#FF7F00", "#000000"]),
-  c("almere", "Almere City", "ALM", "eredivisie", "Almere", 5, 58, ["#DA291C", "#FFFFFF"]),
-  c("pec", "PEC Zwolle", "PEC", "eredivisie", "Zwolle", 5, 60, ["#005CA9", "#FFFFFF"]),
-  c("heracles", "Heracles", "HER", "eredivisie", "Almelo", 5, 60, ["#000000", "#FFFFFF"]),
-  c("excelsior", "Excelsior", "EXC", "eredivisie", "Rotterdam", 5, 58, ["#000000", "#DA291C"]),
+  c("nec", "NEC Nijmegen", "NEC", "eredivisie", "Nijmegen", 4, 62, ["#000000", "#DA291C"]),
+  c("gae", "Go Ahead Eagles", "GAE", "eredivisie", "Deventer", 4, 61, ["#DA291C", "#FFD700"]),
+  c("fortuna", "Fortuna Sittard", "FOR", "eredivisie", "Sittard", 4, 61, ["#FFD700", "#008000"]),
+  c("rkc", "RKC Waalwijk", "RKC", "eredivisie", "Waalwijk", 4, 60, ["#FFD700", "#000000"]),
+  c("volendam", "FC Volendam", "VOL", "eredivisie", "Volendam", 4, 59, ["#FF7F00", "#000000"]),
+  c("almere", "Almere City", "ALM", "eredivisie", "Almere", 4, 58, ["#DA291C", "#FFFFFF"]),
+  c("pec", "PEC Zwolle", "PEC", "eredivisie", "Zwolle", 4, 60, ["#005CA9", "#FFFFFF"]),
+  c("heracles", "Heracles", "HER", "eredivisie", "Almelo", 4, 60, ["#000000", "#FFFFFF"]),
+  c("excelsior", "Excelsior", "EXC", "eredivisie", "Rotterdam", 4, 58, ["#000000", "#DA291C"]),
 
   // Liga PT
   c("benfica", "Benfica", "SLB", "liga-pt", "Lisbon", 2, 84, ["#E30613", "#FFFFFF"]),

@@ -12,7 +12,30 @@ const tpl = (arr: string[], rng: RNG, vars: Record<string, string | number>) => 
 function pickOpponent(save: Save, rng: RNG): Club {
   const club = clubById(save.currentClub.clubId)!;
   const league = clubsByLeague(club.league).filter((c) => c.id !== club.id);
-  return pick(league, rng);
+  
+  // Get already played opponents from match history
+  const playedOpponents = new Set<string>();
+  for (const item of save.news) {
+    if (item.tag === "match") {
+      // Extract opponent from news title/body
+      const oppMatch = item.body.match(/([A-Z]{3})\s+\d+-\d+\s+([A-Z]{3})/);
+      if (oppMatch) {
+        const oppShort = oppMatch[1] === club.short ? oppMatch[2] : oppMatch[1];
+        const oppClub = league.find(c => c.short === oppShort);
+        if (oppClub) playedOpponents.add(oppClub.id);
+      }
+    }
+  }
+  
+  // Filter out already played opponents
+  const availableOpponents = league.filter(c => !playedOpponents.has(c.id));
+  
+  // If all opponents played, reset and allow any opponent (for next season)
+  if (availableOpponents.length === 0) {
+    return pick(league, rng);
+  }
+  
+  return pick(availableOpponents, rng);
 }
 
 // probability of scoring per match by position
@@ -125,6 +148,7 @@ export function rollMatch(save: Save, rng: RNG): { result: MatchSpinResult; news
     assists >= 2 ? "assist" :
     teamResult === "L" ? "loss" :
     teamResult === "D" ? "draw" :
+    teamResult === "W" ? "win" :
     motm ? "motm" : "draw";
 
   const news = mkNews(save, result, newsKey, rng);

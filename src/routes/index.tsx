@@ -45,10 +45,12 @@ function Landing() {
               <Button size="lg" onClick={() => navigate({ to: "/new" })}>
                 Karier Baru
               </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate({ to: "/auth" })}>
+                Login / Daftar
+              </Button>
               {active.length > 0 && (
                 <Button size="lg" variant="secondary" onClick={() => {
-                  setActive(active[0].id);
-                  navigate({ to: "/dashboard" });
+                  void setActive(active[0].id).then(() => navigate({ to: "/dashboard" }));
                 }}>
                   Lanjutkan
                 </Button>
@@ -82,10 +84,10 @@ function Landing() {
           <h2 className="text-2xl font-display font-bold mb-4">Karier tersimpan</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {active.map((s) => (
-              <SaveCard key={s.id} save={s} onOpen={() => { setActive(s.id); navigate({ to: "/dashboard" }); }} onDelete={() => deleteSave(s.id)} />
+              <SaveCard key={s.id} save={s} onOpen={() => { void setActive(s.id).then(() => navigate({ to: "/dashboard" })); }} onDelete={() => { void deleteSave(s.id); }} />
             ))}
             {retired.map((s) => (
-              <SaveCard key={s.id} save={s} retired onOpen={() => { setActive(s.id); navigate({ to: "/dashboard/journey" }); }} onDelete={() => deleteSave(s.id)} />
+              <SaveCard key={s.id} save={s} retired onOpen={() => { void setActive(s.id).then(() => navigate({ to: "/dashboard/journey" })); }} onDelete={() => { void deleteSave(s.id); }} />
             ))}
           </div>
         </section>

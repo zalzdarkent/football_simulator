@@ -65,7 +65,7 @@ function Settings() {
         <CardContent className="p-6 space-y-3">
           <h3 className="font-display font-bold">Backup & pulihkan</h3>
           <p className="text-sm text-muted-foreground">
-            Data karier tersimpan di browser. Ekspor untuk backup atau pindah device.
+            Data karier tersimpan di database PostgreSQL. Ekspor untuk backup atau pindah device.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={exportJson}>Ekspor JSON</Button>
@@ -80,9 +80,9 @@ function Settings() {
       <Card className="bg-card-gradient border-destructive/40">
         <CardContent className="p-6 space-y-3">
           <h3 className="font-display font-bold text-destructive">Zona bahaya</h3>
-          <Button variant="destructive" onClick={() => {
+          <Button variant="destructive" onClick={async () => {
             if (confirm("Hapus karier ini secara permanen?")) {
-              deleteSave(save.id);
+              await deleteSave(save.id);
               navigate({ to: "/" });
             }
           }}>Hapus karier ini</Button>

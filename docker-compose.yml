@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fcs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fcs
+      POSTGRES_PASSWORD: fcs_secret
+      POSTGRES_DB: fcs_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - fcs_pg_data:/var/lib/postgresql/data
+
+volumes:
+  fcs_pg_data:
