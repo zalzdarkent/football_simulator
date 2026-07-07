@@ -361,7 +361,7 @@ function advanceSeason(sv: Save, result: SeasonEndResult, chosen: Offer | { kind
     news,
     followers: sv.followers + followersDelta,
     spinLog: [{
-      id: uid(), type: "season", season: sv.season.index, at: Date.now(),
+      id: uid(), type: "season" as const, season: sv.season.index, at: Date.now(),
       summary: `Musim ${sv.season.index}: liga #${result.leaguePosition} • ${result.trophies.length} trofi • ${result.awards.length} award`,
     }, ...sv.spinLog].slice(0, 300),
     status: retiring ? "retired" : "active",
