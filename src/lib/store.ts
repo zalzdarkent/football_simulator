@@ -120,24 +120,16 @@ export const useStore = create<Store>()(
         if (!save || save.status !== "active") return null;
         if (save.season.matchday >= save.season.totalMatches) return null;
         const rng = mulberry32(randSeed());
-        const opp = previewOpponent(save, mulberry32(randSeed()));
-        // Use a fresh rng for the actual roll so results differ from opponent preview
-        const rolled = rollMatch({ ...save }, rng);
-        // Force opponent to be the previewed one for cohesion
-        rolled.result.opponentClubId = opp.id;
-        // update news/social opponent naming
-        const oppName = opp.name;
-        return { ...rolled, opponentName: oppName };
+        const rolled = rollMatch(save, rng);
+        const opp = clubById(rolled.result.opponentClubId)!;
+        return { ...rolled, opponentName: opp.name };
       },
 
-      confirmMatch: (saveId) => {
-        const save = get().saves.find((x) => x.id === saveId);
-        if (!save) return;
-        // re-roll final result server-authoritatively (client-side here) with committed seed step
-        const rng = mulberry32(save.seed + save.season.index * 1000 + save.season.matchday + 1);
-        const rolled = rollMatch(save, rng);
+      confirmMatch: (saveId, rolled) => {
         applyMatchResult(set, get, saveId, rolled);
       },
+
+
 
       clearPending: (saveId) => set((s) => ({
         saves: s.saves.map((sv) => sv.id === saveId ? { ...sv, pending: undefined } : sv),
