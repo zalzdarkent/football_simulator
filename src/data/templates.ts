@@ -41,6 +41,10 @@ export const NEWS = {
   card_red: [
     "{player} diusir wasit, {club} bermain 10 orang lawan {opp}.",
   ],
+  suspended: [
+    "{player} harus absen karena hukuman kartu, {club} main tanpanya lawan {opp}.",
+    "Sanksi kartu berlaku, {player} jadi penonton saat {club} hadapi {opp}.",
+  ],
   transfer_rumor: [
     "Rumor: klub-klub besar Eropa incar {player} musim depan!",
     "Bursa transfer memanas: {player} disebut jadi target utama.",

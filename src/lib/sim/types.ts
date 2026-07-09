@@ -79,7 +79,7 @@ export type NewsItem = {
   matchday: number;
   title: string;
   body: string;
-  tag: "match" | "transfer" | "trophy" | "award" | "rumor" | "injury";
+  tag: "match" | "transfer" | "trophy" | "award" | "rumor" | "injury" | "suspended";
 };
 
 export type SocialPost = {
@@ -111,7 +111,7 @@ export type SpinLogEntry = {
 export type MatchSpinResult = {
   opponentClubId: string;
   home: boolean;
-  selection: "starter" | "sub" | "benched" | "injured";
+  selection: "starter" | "sub" | "benched" | "injured" | "suspended";
   minutes: number;
   goals: number;
   assists: number;
@@ -191,6 +191,8 @@ export type Save = {
   spinLog: SpinLogEntry[];
   followers: number;
   status: "active" | "retired";
+  suspendedMatches?: number;
+  injuredMatches?: number;
   retirement?: { season: number; reason: string; finalOverall: number };
   // pending state — spin result awaiting confirmation
   pending?:

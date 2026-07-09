@@ -260,7 +260,14 @@ function applyMatchResult(
   set((s) => ({
     saves: s.saves.map((sv) => {
       if (sv.id !== saveId) return sv;
-      const played = rolled.result.selection !== "injured";
+      const played = rolled.result.selection === "starter" || rolled.result.selection === "sub";
+      let suspendedMatches = sv.suspendedMatches || 0;
+      if (suspendedMatches > 0) suspendedMatches--;
+      else if (rolled.result.red) suspendedMatches = 1;
+
+      let injuredMatches = sv.injuredMatches || 0;
+      if (injuredMatches > 0) injuredMatches--;
+      else if (rolled.result.injuryMatches > 0) injuredMatches = rolled.result.injuryMatches;
       const isApp = rolled.result.minutes > 0;
       const cs = sv.season.currentStats;
       const newSeasonStats = {
@@ -291,6 +298,8 @@ function applyMatchResult(
         id: uid(), type: "match", season: sv.season.index, at: Date.now(),
         summary: rolled.result.selection === "injured"
           ? "Cedera, absen"
+          : rolled.result.selection === "suspended"
+          ? "Sanksi kartu, absen"
           : `${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst} • ${rolled.result.goals}G ${rolled.result.assists}A rating ${rolled.result.rating}`,
       };
       return {
@@ -314,6 +323,8 @@ function applyMatchResult(
         followers: sv.followers + Math.max(0, rolled.result.goals * 8000 + (rolled.result.motm ? 15000 : 0) + (played ? 500 : 0)),
         spinLog: [log, ...sv.spinLog].slice(0, 300),
         milestones,
+        suspendedMatches,
+        injuredMatches,
       };
     }),
   }));

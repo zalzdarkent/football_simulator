@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { toast } from "sonner";
+import { setStoredSessionId, setStoredUserId, setStoredUsername } from "../lib/api";
+import { useStore } from "../lib/store";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -44,12 +46,22 @@ function AuthPage() {
       }
 
       // Store session in localStorage
-      localStorage.setItem("sessionId", data.session.id);
-      localStorage.setItem("userId", data.user.id);
-      localStorage.setItem("username", data.user.username);
+      setStoredSessionId(data.session.id);
+      setStoredUserId(data.user.id);
+      setStoredUsername(data.user.username);
+
+      await useStore.getState().hydrate();
 
       toast.success(isLogin ? "Login berhasil!" : "Registrasi berhasil!");
-      navigate({ to: "/" });
+      
+      const state = useStore.getState();
+      if (state.activeSaveId) {
+        navigate({ to: "/dashboard" });
+      } else if (state.saves.length === 0) {
+        navigate({ to: "/new" });
+      } else {
+        navigate({ to: "/" });
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Terjadi kesalahan");
     } finally {

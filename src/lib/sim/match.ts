@@ -9,33 +9,31 @@ const tpl = (arr: string[], rng: RNG, vars: Record<string, string | number>) => 
   return s;
 };
 
-function pickOpponent(save: Save, rng: RNG): Club {
+function pickOpponent(save: Save, rng?: RNG): Club {
   const club = clubById(save.currentClub.clubId)!;
-  const league = clubsByLeague(club.league).filter((c) => c.id !== club.id);
+  const opponents = clubsByLeague(club.league).filter((c) => c.id !== club.id);
   
-  // Get already played opponents from match history
-  const playedOpponents = new Set<string>();
-  for (const item of save.news) {
-    if (item.tag === "match") {
-      // Extract opponent from news title/body
-      const oppMatch = item.body.match(/([A-Z]{3})\s+\d+-\d+\s+([A-Z]{3})/);
-      if (oppMatch) {
-        const oppShort = oppMatch[1] === club.short ? oppMatch[2] : oppMatch[1];
-        const oppClub = league.find(c => c.short === oppShort);
-        if (oppClub) playedOpponents.add(oppClub.id);
-      }
-    }
+  if (opponents.length === 0) return club;
+  
+  // Calculate which cycle of the league schedule we're in
+  const cycle = Math.floor(save.season.matchday / opponents.length);
+  const indexInCycle = save.season.matchday % opponents.length;
+  
+  // Use a predictable seed for this cycle so the shuffle is consistent
+  // across previews and actual rolls
+  const str = save.id + "-" + save.season.index + "-" + cycle;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+  const cycleRng = mulberry32(hash);
+  
+  // Shuffle opponents deterministically for this cycle
+  const shuffled = [...opponents];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(cycleRng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   
-  // Filter out already played opponents
-  const availableOpponents = league.filter(c => !playedOpponents.has(c.id));
-  
-  // If all opponents played, reset and allow any opponent (for next season)
-  if (availableOpponents.length === 0) {
-    return pick(league, rng);
-  }
-  
-  return pick(availableOpponents, rng);
+  return shuffled[indexInCycle];
 }
 
 // probability of scoring per match by position
@@ -64,12 +62,14 @@ export function rollMatch(save: Save, rng: RNG): { result: MatchSpinResult; news
   const startProb = Math.min(0.95, 0.4 + (ovr - (100 - club.tier * 12)) / 40);
   let selection: MatchSpinResult["selection"];
   const rSel = rng();
-  if (rSel < 0.03) selection = "injured";
+  if (save.suspendedMatches && save.suspendedMatches > 0) selection = "suspended";
+  else if (save.injuredMatches && save.injuredMatches > 0) selection = "injured";
+  else if (rSel < 0.03) selection = "injured";
   else if (rSel < startProb) selection = "starter";
   else if (rSel < startProb + 0.2) selection = "sub";
   else selection = "benched";
 
-  if (selection === "benched" || selection === "injured") {
+  if (selection === "benched" || selection === "injured" || selection === "suspended") {
     const teamRoll = rng();
     const strengthDiff = (club.reputation - opp.reputation) / 100;
     const winP = 0.35 + strengthDiff * 0.35 + (home ? 0.08 : -0.02);
@@ -85,7 +85,7 @@ export function rollMatch(save: Save, rng: RNG): { result: MatchSpinResult; news
       motm: false,
       injuryMatches: selection === "injured" ? range(1, 4, rng) : 0,
     };
-    const key = selection === "injured" ? "injury" : "benched";
+    const key = selection === "suspended" ? "suspended" : selection === "injured" ? "injury" : "benched";
     const news = mkNews(save, result, key, rng);
     return { result, news };
   }
@@ -184,7 +184,7 @@ function mkNews(save: Save, r: MatchSpinResult, key: keyof typeof NEWS, rng: RNG
     id: uid(),
     season: save.season.index,
     matchday: save.season.matchday + 1,
-    tag: key === "injury" ? "injury" : "match",
+    tag: key === "suspended" ? "suspended" : key === "injury" ? "injury" : "match",
     title: tpl(NEWS[key], rng, {
       player: save.player.name, club: club.name, opp: opp.name,
       goals: r.goals, assists: r.assists, rating: r.rating,
