@@ -29,6 +29,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api", referenceRouter);
+app.use("/api", gameRouter);
 app.use("/api/session", sessionRouter);
 app.use("/api/saves", savesRouter);
 app.use("/api/auth", authRouter);
