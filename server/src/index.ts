@@ -8,6 +8,7 @@ import { referenceRouter } from "./routes/reference.js";
 import { sessionRouter } from "./routes/session.js";
 import { savesRouter } from "./routes/saves.js";
 import { authRouter } from "./routes/auth.js";
+import { gameRouter } from "./routes/game.js";
 
 dotenv.config();
 
