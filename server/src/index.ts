@@ -8,6 +8,7 @@ import { referenceRouter } from "./routes/reference.js";
 import { sessionRouter } from "./routes/session.js";
 import { savesRouter } from "./routes/saves.js";
 import { authRouter } from "./routes/auth.js";
+import { gameRouter } from "./routes/game.js";
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api", referenceRouter);
+app.use("/api", gameRouter);
 app.use("/api/session", sessionRouter);
 app.use("/api/saves", savesRouter);
 app.use("/api/auth", authRouter);

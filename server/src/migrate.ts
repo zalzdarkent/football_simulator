@@ -93,6 +93,127 @@ export async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON activity_logs(user_id);
     CREATE INDEX IF NOT EXISTS idx_activity_logs_session ON activity_logs(session_id);
+
+    ALTER TABLE competitions ADD COLUMN IF NOT EXISTS format VARCHAR(24) NOT NULL DEFAULT 'league';
+    ALTER TABLE competitions ADD COLUMN IF NOT EXISTS teams_count SMALLINT NOT NULL DEFAULT 20;
+    ALTER TABLE competitions ADD COLUMN IF NOT EXISTS rounds JSONB;
+
+    CREATE TABLE IF NOT EXISTS season_competitions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      competition_id VARCHAR(64) NOT NULL REFERENCES competitions(id),
+      qualified BOOLEAN NOT NULL DEFAULT TRUE,
+      current_stage TEXT,
+      eliminated_at TEXT,
+      final_position INT,
+      UNIQUE (save_id, season_idx, competition_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_season_comp_save ON season_competitions(save_id, season_idx);
+
+    CREATE TABLE IF NOT EXISTS matches (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      competition_id VARCHAR(64) NOT NULL REFERENCES competitions(id),
+      matchday INT,
+      stage TEXT,
+      leg SMALLINT,
+      order_key INT NOT NULL,
+      opponent_club_id VARCHAR(64) NOT NULL REFERENCES clubs(id),
+      home BOOLEAN NOT NULL,
+      played BOOLEAN NOT NULL DEFAULT FALSE,
+      team_goals INT,
+      opp_goals INT,
+      player_selection VARCHAR(16),
+      player_minutes INT,
+      player_goals INT,
+      player_assists INT,
+      player_saves INT,
+      player_rating REAL,
+      yellow BOOLEAN,
+      red BOOLEAN,
+      clean_sheet BOOLEAN,
+      motm BOOLEAN,
+      injury_matches INT,
+      played_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_matches_save_season ON matches(save_id, season_idx, order_key);
+    CREATE INDEX IF NOT EXISTS idx_matches_played ON matches(save_id, played);
+
+    CREATE TABLE IF NOT EXISTS trophies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      competition_id VARCHAR(64) NOT NULL REFERENCES competitions(id),
+      club_id VARCHAR(64) NOT NULL REFERENCES clubs(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_trophies_save ON trophies(save_id, season_idx);
+
+    CREATE TABLE IF NOT EXISTS awards_won (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      award_id VARCHAR(64) NOT NULL REFERENCES awards(id),
+      club_id VARCHAR(64) REFERENCES clubs(id),
+      detail TEXT,
+      rank_position INT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_awards_won_save ON awards_won(save_id, season_idx);
+
+    CREATE TABLE IF NOT EXISTS award_nominees (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      award_id VARCHAR(64) NOT NULL REFERENCES awards(id),
+      rank_position INT NOT NULL,
+      player_name TEXT NOT NULL,
+      club_id VARCHAR(64) REFERENCES clubs(id),
+      is_you BOOLEAN NOT NULL DEFAULT FALSE,
+      stats JSONB
+    );
+    CREATE INDEX IF NOT EXISTS idx_award_nominees_save ON award_nominees(save_id, season_idx, award_id);
+
+    CREATE TABLE IF NOT EXISTS transfers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      from_club_id VARCHAR(64) REFERENCES clubs(id),
+      to_club_id VARCHAR(64) NOT NULL REFERENCES clubs(id),
+      fee_m REAL NOT NULL DEFAULT 0,
+      wage_k INT NOT NULL,
+      years SMALLINT NOT NULL,
+      kind VARCHAR(24) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_transfers_save ON transfers(save_id);
+
+    CREATE TABLE IF NOT EXISTS news (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      matchday INT,
+      tag VARCHAR(24) NOT NULL,
+      headline TEXT NOT NULL,
+      body TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_news_save ON news(save_id, season_idx);
+
+    CREATE TABLE IF NOT EXISTS social_posts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,
+      season_idx INT NOT NULL,
+      matchday INT,
+      body TEXT NOT NULL,
+      likes INT NOT NULL DEFAULT 0,
+      comments INT NOT NULL DEFAULT 0,
+      reposts INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_social_save ON social_posts(save_id, season_idx);
   `);
 
   console.log("Migration complete.");
