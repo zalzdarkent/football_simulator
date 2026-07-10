@@ -52,7 +52,8 @@ referenceRouter.get("/clubs/:id", async (req, res) => {
 
 referenceRouter.get("/competitions", async (_req, res) => {
   const { rows } = await query(
-    `SELECT id, name, short, scope, league_id AS league, region, tier_boost AS "tierBoost"
+    `SELECT id, name, short, scope, league_id AS league, region,
+            tier_boost AS "tierBoost", format, teams_count AS "teamsCount", rounds
      FROM competitions ORDER BY scope, name`,
   );
   res.json(rows);
