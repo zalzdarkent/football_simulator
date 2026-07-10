@@ -1,146 +1,137 @@
+# Rencana: Full Backend + Multi-Kompetisi + Awards Lengkap
 
-# Football Career Simulator — "Become a Legend"
+Semua logika pindah ke Express (`server/`). Frontend jadi *thin client*: fetch API + render + animasi. Save disimpan per user di Postgres (auth login sudah ada).
 
-Web app single-player berbasis spin, semua data karier disimpan di browser (localStorage). Mendukung banyak save/karier per browser. Semua fitur Fase 1+2+3 dari PRD masuk.
+## 1. Skema Database Baru (`server/src/migrate.ts`)
 
-> Catatan hak cipta: kamu memilih pakai nama asli klub/liga/penghargaan. Ini berisiko legal kalau nanti dipublish komersial — aku akan tetap kerjakan sesuai permintaan, tapi pakai dataset seed statis (tidak menarik dari API resmi). Nama pemain lain di liga tetap fiktif.
-
----
-
-## 1. Arsitektur & Tech
-
-- **Frontend only**: TanStack Start (template project) + React 19 + Tailwind v4 + shadcn.
-- **State & persistence**: Zustand store dengan middleware `persist` ke `localStorage`. Semua RNG spin dijalankan di sisi client (karena local-only) — struktur logic tetap dipisah bersih di `src/lib/sim/*` supaya mudah dipindahkan ke server function saat Cloud diaktifkan nanti.
-- **RNG**: seeded PRNG (mulberry32) per karier, seed disimpan di save → hasil reproducible & bisa mendukung mode preview (re-roll di preview tidak advance seed final sampai konfirmasi).
-- **Animasi spin**: Framer Motion (roda berputar, angka gol bergulir, kartu award terbuka).
-- **Routing**: TanStack file-based di `src/routes/`.
-
-## 2. Data Seed (statis, di repo)
-
-`src/data/`:
-- `countries.ts` — daftar negara + kode bendera (emoji).
-- `leagues.ts` — liga top: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Eredivisie, Liga Portugal, Süper Lig, MLS, Saudi Pro League + Champions League/Europa League sebagai kompetisi.
-- `clubs.ts` — ±20 klub per liga top (nama asli), dengan `tier` (1–4), `reputation`, `budget`, kota, warna kit.
-- `awards.ts` — Ballon d'Or, FIFA Best, Golden Boot (per liga), Golden Glove, POTM, MOTM, TOTS, Best Young Player, UCL top scorer, dll.
-- `newsTemplates.ts` & `socialTemplates.ts` — template string dengan placeholder `{player}`, `{club}`, `{goals}`, dll.
-- `firstNames.ts` / `lastNames.ts` per region — untuk generate pemain lain (rival top scorer, dll).
-
-## 3. Model Data (TypeScript types, disimpan di localStorage)
+Tabel referensi (di-seed sekali, sumber kebenaran):
 
 ```text
-Save
- ├─ id, createdAt, seed
- ├─ player: { name, country, position, age, dob, height, foot, avatarSeed }
- ├─ attributes: { overall, potential, pace, shooting, passing, dribbling, defending, physical, gk? }
- ├─ currentClub: { clubId, shirtNumber, wage, contractUntilSeason }
- ├─ season: { index, matchesPlayed, totalMatches (default 38), seasonStats }
- ├─ careerStats: aggregate
- ├─ statsBySeason[]: per musim {clubId, apps, goals, assists, avgRating, ...}
- ├─ transfers[]: {fromClubId, toClubId, season, type, fee}
- ├─ trophies[]: {competitionId, season, clubId}
- ├─ awards[]: {awardId, season, clubId}
- ├─ milestones[]: {type, value, season, at}
- ├─ news[]: {id, seasonWeek, title, body, tag}
- ├─ social[]: {id, content, likes, comments, at}
- ├─ spinLog[]: {type, resultSummary, at}
- ├─ status: active | retired
- └─ retirement?: {season, reason, finalOverall}
+countries, leagues, clubs         → sudah ada, tinggal perluas
+competitions                       → tambah kolom: format (league|knockout|group_knockout),
+                                     rounds JSONB, teams_count
+awards                             → perluas jadi ~15 award (lihat §4)
+first_names, last_names, avatars   → untuk generator opponent & shortlist
 ```
 
-Root state:
+Tabel state simulasi per save (relational, bukan blob JSON lagi):
+
 ```text
-AppState
- ├─ saves: Save[]
- ├─ activeSaveId?: string
- └─ settings: { spinMode: 'preview' } // fixed for MVP
+saves(id, user_id, seed, player JSONB, attributes JSONB,
+      current_club_id, season_index, age, status, created_at)
+season_competitions(save_id, season_idx, competition_id, format, stage,
+                    club_qualified BOOL, position INT, eliminated_at TEXT)
+matches(id, save_id, season_idx, competition_id, matchday INT|null,
+        stage TEXT|null,  -- 'group','R16','QF','SF','F' untuk KO
+        opponent_club_id, home BOOL, played BOOL,
+        team_goals INT, opp_goals INT,
+        player_goals, player_assists, player_saves, rating REAL,
+        yellow, red, motm BOOL, played_at TIMESTAMPTZ)
+trophies(id, save_id, season_idx, competition_id, club_id)
+awards_won(id, save_id, season_idx, award_id, detail, is_world_scope)
+award_nominees(save_id, season_idx, award_id, rank, player_name, club_id, is_you)
+transfers(id, save_id, season_idx, from_club, to_club, fee, wage, years, type)
+news(id, save_id, season_idx, kind, headline, body, created_at)
+social_posts(id, save_id, season_idx, platform, body, likes, comments)
 ```
 
-## 4. Logika Spin (semua di `src/lib/sim/`)
+Semua `save_id` → `saves(id) ON DELETE CASCADE`. Index di `(save_id, season_idx)`.
 
-### 4.1 Match Spin
-Input: player attributes, position, club tier, opponent tier (dipilih otomatis dari fixture generator).
-Output: `{ selection: 'starter'|'sub'|'benched', teamResult: 'W'|'D'|'L', goals, assists, cards, rating (1–10), injuryDays }`.
-Peluang di-tune berdasarkan overall vs opponent, plus modifier posisi (ST lebih besar peluang gol; GK dapat clean sheet & save-of-the-match).
+## 2. Struktur Express (MVC)
 
-### 4.2 Season-End Spin
-Dihitung dari akumulasi season stats + roll:
-- Trofi tim: probabilitas berdasarkan tier klub.
-- Awards individu: threshold (mis. Golden Boot butuh top-3 gol di liga secara relatif; POTY butuh Ballon d'Or roll di atas ambang).
-- Menghasilkan `offers[]` untuk transfer & `renewal?` untuk perpanjangan.
-
-### 4.3 Transfer/Contract Spin
-Menghasilkan 3–5 tawaran klub (fee, wage, kontrak, tier). User memilih: **Stay**, **Extend**, atau **Pindah**.
-
-### 4.4 Preview Mode
-- Sebelum konfirmasi, user bisa klik "Re-roll" tak terbatas — implementasi: fungsi spin dipanggil dengan seed sementara acak (bukan seed persist).
-- Tombol "Konfirmasi" → tulis hasil ke save & advance state (matchesPlayed++, dsb.).
-- Tombol "Batal" hanya tersedia sebelum konfirmasi.
-
-### 4.5 Progres atribut & umur
-- Setiap akhir musim: umur++, overall bergerak berdasarkan performa & kurva umur (peak 27–30, decline setelah 32).
-- Auto-retire saat overall < 60 dan umur ≥ 34, atau user klik "Pensiun".
-
-## 5. Struktur Route
-
-```
-src/routes/
-  __root.tsx          → shell + header (nav muncul saat ada save aktif)
-  index.tsx           → Landing (New Career / Continue / pilih save)
-  new.tsx             → Character creation wizard (3 langkah + preview kartu)
-  dashboard.tsx       → Layout karier aktif dgn <Outlet /> + sidebar
-  dashboard.index.tsx → Home dashboard (ringkasan + tombol Main Berikutnya)
-  dashboard.match.tsx        → Match Spin (preview + confirm)
-  dashboard.season-end.tsx   → Season-End Spin
-  dashboard.transfer.tsx     → Transfer/Contract Spin
-  dashboard.stats.tsx        → Statistik musim & karier
-  dashboard.trophies.tsx     → Lemari trofi & penghargaan (2 tab)
-  dashboard.journey.tsx      → Timeline karier
-  dashboard.news.tsx         → News feed
-  dashboard.social.tsx       → Simulasi sosmed
-  dashboard.transfers.tsx    → Riwayat transfer
-  dashboard.leaderboard.tsx  → Leaderboard antar save lokal
-  dashboard.settings.tsx     → Rename/delete save, export/import JSON
+```text
+server/src/
+├── db.ts                          (sudah ada)
+├── index.ts                       (sudah ada — mount routes)
+├── models/
+│   ├── save.ts                    CRUD saves
+│   ├── match.ts                   CRUD matches + query per-season
+│   ├── competition.ts             query kompetisi & bracket state
+│   ├── award.ts, trophy.ts, transfer.ts, news.ts
+│   └── reference.ts               leagues/clubs/awards (cached)
+├── services/  (LOGIKA SIMULASI, dulu di src/lib/sim/*)
+│   ├── rng.ts                     seeded PRNG (mulberry32) — deterministik per save
+│   ├── season-setup.ts            generate fixtures liga + bracket piala + UCL group
+│   ├── match-sim.ts               simulasi 1 match: skor tim, statline pemain, rating, MOTM
+│   ├── knockout.ts                advance stage KO, buat lawan berikutnya
+│   ├── progression.ts             perkembangan attribute + retirement
+│   ├── awards-engine.ts           hitung shortlist & winner untuk 15 award
+│   └── transfer-market.ts         generate offer musim panas
+├── controllers/
+│   ├── saves.controller.ts        POST /saves, GET /saves/:id, DELETE
+│   ├── season.controller.ts       POST /saves/:id/season/start  → seed fixtures
+│   ├── match.controller.ts        GET  /saves/:id/matches/next  → preview (unlimited re-roll)
+│   │                              POST /saves/:id/matches/:mid/commit
+│   ├── awards.controller.ts       GET  /saves/:id/season/:n/awards/preview
+│   │                              POST /saves/:id/season/:n/awards/commit
+│   ├── transfer.controller.ts     GET  offers preview, POST accept
+│   └── reference.controller.ts    GET /reference/{leagues,clubs,competitions,awards}
+└── routes/*.ts                     tipis: bind ke controller
 ```
 
-Guard: route `dashboard/*` redirect ke `/` jika tidak ada `activeSaveId`.
+Spin **Preview Mode**: endpoint `?seed=<preview_seed>` mengembalikan hasil deterministik tanpa menulis DB. `commit` menulis dengan seed yang dipilih user → hasil final permanen.
 
-## 6. Fitur UI Detail
+## 3. Multi-Kompetisi Per Musim
 
-- **Landing**: hero + list save cards (nama pemain, klub, overall, musim ke-, umur) + tombol New/Continue/Delete.
-- **Character Creation**: 3 langkah — Identitas (nama, DOB → umur otomatis, negara searchable, tinggi, kaki dominan) → Posisi (grid formasi 8 posisi) → Klub awal (3 opsi acak dari tier 3–4). Preview kartu pemain gaya FUT sebelum submit.
-- **Dashboard home**: kartu profil + progress bar overall & musim, statistik musim ini vs karier total, quick actions.
-- **Match spin UI**: animasi roda + reveal berurutan (Selection → Team result → Personal stats → Rating). Toolbar: `Re-roll`, `Konfirmasi`, `Batal`. Modal hasil menampilkan berita otomatis + post sosmed yang akan ditambahkan.
-- **Season-End**: reveal bertahap (Liga finish → Trofi → Awards → Offers).
-- **Transfer**: kartu tawaran side-by-side, pilih 1.
-- **Trophies**: 2 tab (Tim / Individu), grouped per musim/klub, ikon per kompetisi.
-- **Journey**: vertical timeline (debut, transfer, milestone gol, trofi, award, pensiun).
-- **News**: list card dengan tag warna, filter per musim.
-- **Social**: feed gaya Twitter/IG, followers count naik dgn performa; reaksi otomatis.
-- **Leaderboard**: tab (Top Scorers, Most Trophies, Highest Overall, Longest Career) antar save di device ini.
-- **Settings**: rename save, delete, export JSON, import JSON.
+Setiap musim, saat `POST /season/start`, backend generate:
 
-## 7. Desain Visual
+| Kompetisi | Format | Jadwal untuk pemain |
+|---|---|---|
+| Liga domestik | 38 matchday (round-robin ringkas: 20–34 match tampil) | matchday reguler |
+| Piala domestik | KO: R32 → R16 → QF → SF → Final | disisipkan tiap ±4 matchday |
+| Piala Liga (EFL/dsb) | KO ringkas 4 stage | 2–3 match/musim |
+| UCL / UEL / UECL | Grup 6 match + R16 → Final (jika klub lolos berdasar tier & posisi musim lalu) | disisipkan midweek |
 
-- Tema gelap sporty: latar `#0B1220`, panel `#111C2E`, aksen `#22C55E` (rumput) & `#F59E0B` (emas trofi), teks `#E5E7EB`.
-- Font: Outfit (heading) + Inter (body) via `@fontsource`.
-- Kartu pemain gradient hijau→emas dgn overall besar di pojok, mengambil inspirasi kartu FUT/PES.
-- Semua warna via CSS variable di `src/styles.css` (oklch), tanpa hardcode kelas warna.
+Frontend punya route `/dashboard/match` yang menampilkan **jadwal musim** (list `matches` yang belum `played`). Klik pertandingan → preview → commit. UI menampilkan badge kompetisi (EPL / FA Cup / UCL R16 / dst).
 
-## 8. Roadmap Implementasi (urutan build)
+Auto-advance bracket: setelah user commit match KO, service `knockout.advance()` menentukan apakah klub lolos (probabilitas berdasar rating pemain + tier klub) dan generate lawan babak berikutnya.
 
-1. Setup design tokens, fonts, layout shell, header/nav, seed data statis.
-2. Zustand store + persist + tipe data + util RNG.
-3. Landing + save management (create/continue/delete/export/import).
-4. Character creation wizard + preview kartu.
-5. Dashboard home + Match Spin (preview mode + konfirmasi) + news/social auto-generator.
-6. Statistik per musim & karier, riwayat transfer.
-7. Season-End Spin + Transfer Spin + kurva umur/retirement.
-8. Lemari Trofi & Penghargaan, Career Journey timeline.
-9. News feed page, simulasi sosmed page, Leaderboard lokal.
-10. Settings + polish animasi + head metadata SEO per route.
+## 4. Sistem Awards Lengkap
 
-## 9. Yang TIDAK dikerjakan sekarang
+Award di-seed ke tabel `awards`:
 
-- Login/akun & sync multi-device (bisa di-upgrade ke Lovable Cloud nanti — data layer sudah dipisah supaya migrasi mudah).
-- Leaderboard global antar user.
-- Match engine real-time.
+**Bulanan (per liga):** POTM, Save of the Month (GK), Goal of the Month
+**Musiman (per liga):** Top Scorer, Top Assist, Golden Glove, Best Young (U-21), POTY Liga, TOTS (11 pemain)
+**Kontinental:** UCL Top Scorer, UCL POTY, UEL POTY
+**Dunia (tahunan):** Ballon d'Or, FIFA The Best, UEFA Men's POTY, Golden Boy (U-21), TOTY (FIFPRO XI)
+
+`awards-engine.ts` menghasilkan **shortlist 5–10 nominee** (pemain fiktif generated) plus posisi pemain, dengan probabilitas menang berdasar:
+- rating musim, gol, assist, clean sheet
+- trofi (Liga, UCL berbobot besar untuk Ballon d'Or)
+- tier klub & rep pemain
+
+Endpoint `GET /awards/preview` mengembalikan shortlist urut peringkat + kandidat lain. `POST /awards/commit` menyimpan pemenang + peringkat pemain (mis. "Ballon d'Or #3") ke `awards_won` + `award_nominees`. Halaman `/dashboard/trophies` menampilkan cabinet + halaman detail per award musim.
+
+## 5. Perubahan Frontend
+
+- Hapus `src/lib/sim/*` (logika pindah ke backend). Sisakan `types.ts` yang match dengan API response.
+- Ganti Zustand `persist` → Zustand + React Query. Save-state di-fetch dari API, cache di React Query, mutation untuk commit.
+- `src/lib/api.ts` diperluas: `saves`, `matches`, `awards`, `transfers`, `reference`.
+- Auth: gunakan `/auth` yang sudah ada (login/register) → simpan token → semua request kirim `Authorization: Bearer`.
+- `AppHeader` menampilkan user + list saves + tombol logout.
+- Halaman baru: `/dashboard/fixtures` (jadwal musim, list all matches per kompetisi), `/dashboard/awards/:season` (detail nominee & ranking).
+- `/dashboard/match` jadi flow: pilih match berikutnya dari fixtures → preview (re-roll) → commit → jump ke match berikutnya.
+
+## 6. Rencana Implementasi (bertahap)
+
+1. **Migrate & seed**: perluas `migrate.ts` dengan tabel state; `seed.ts` isi awards + competitions lengkap. Buat `reseed` untuk dev.
+2. **Services** (port logika dari `src/lib/sim/*`): rng, match-sim, knockout, awards-engine, progression, transfer-market. Unit-friendly (pure functions).
+3. **Models + Controllers + Routes** untuk saves, season, match, awards, transfer, reference.
+4. **Frontend API layer**: hook `useSave`, `useNextMatches`, `useAwardsPreview`, dst dengan React Query.
+5. **Refactor halaman** dashboard.match, .season-end, .trophies, .transfers → pakai API.
+6. **Halaman baru**: /dashboard/fixtures, /dashboard/awards.
+7. **Auth wiring**: token disimpan di localStorage; guard `/dashboard/*` redirect ke `/auth` jika belum login. StoreHydrator diganti.
+8. **Migrasi save lokal → server**: tombol "Import from localStorage" di /auth setelah login (opsional; skip jika tidak diminta).
+
+## Catatan teknis
+
+- **Determinisme**: seed disimpan di `saves.seed`. Setiap generator jadwal, match, awards menerima `(seed, season_idx, entity_key)` → `mulberry32(hash(seed+key))` supaya preview & commit menghasilkan angka yang sama untuk seed yang sama.
+- **Preview vs commit**: preview cukup panggil service in-memory tanpa `INSERT`. Commit `INSERT`. Tidak perlu tabel "draft".
+- **Backend dev**: `docker-compose.yml` sudah ada untuk Postgres. User jalankan `pnpm --filter server dev` (atau `bun`) sendiri. Frontend `src/lib/api.ts` baca `VITE_API_URL` (default `http://localhost:4000`).
+- **CORS**: Express sudah pakai `cors` — pastikan allow origin frontend.
+
+## Yang di-*keep*
+- Semua data konstan `src/data/*.ts` tetap dipakai sebagai **sumber seed script** — tapi runtime frontend fetch dari API, bukan import langsung.
+- UI/theme, komponen shadcn, animasi Framer Motion, halaman existing (design tidak berubah).
+
+Kalau plan ini oke, aku mulai dari langkah 1 (migrate & seed lengkap) lalu naik bertahap. Kalau ada bagian yang mau dipersempit dulu (mis. skip Piala Liga, atau Awards nominee ranking pakai versi ringkas), bilang saja sebelum aku mulai.
