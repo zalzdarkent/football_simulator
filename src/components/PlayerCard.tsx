@@ -36,7 +36,7 @@ export function PlayerCard({ save, size = "md" }: Props) {
 
   return (
     <div
-      className={`${dim} aspect-[3/4] rounded-2xl ${gradient} text-primary-foreground shadow-2xl relative overflow-hidden flex flex-col`}
+      className={`${dim} aspect-[3/4.5] rounded-2xl ${gradient} text-primary-foreground shadow-2xl relative overflow-hidden flex flex-col`}
       style={{ boxShadow: "0 10px 40px -10px oklch(0.72 0.19 145 / 0.4)" }}
     >
       {/* Top section: Overall, position, country, club */}
@@ -66,26 +66,26 @@ export function PlayerCard({ save, size = "md" }: Props) {
       </div>
 
       {/* Player avatar */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-28 h-28 rounded-full bg-primary-foreground/10 flex items-center justify-center text-5xl border-2 border-primary-foreground/20">
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="w-24 h-24 rounded-full bg-primary-foreground/10 flex items-center justify-center text-5xl border-2 border-primary-foreground/20">
           👤
         </div>
       </div>
 
       {/* Player name */}
-      <div className="text-center px-4 pb-2">
-        <div className="font-display font-bold text-xl leading-tight truncate">
+      <div className="text-center px-4 pb-1">
+        <div className="font-display font-bold text-lg leading-tight truncate text-white">
           {save.player.name}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="bg-black/20 backdrop-blur-sm p-3">
-        <div className="grid grid-cols-3 gap-2">
+      <div className="bg-black/20 backdrop-blur-sm p-2.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {stats.map(([k, v]) => (
-            <div key={k} className="bg-primary-foreground/10 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold">{v}</div>
-              <div className="text-[10px] uppercase tracking-wider opacity-70">{k}</div>
+            <div key={k} className="bg-primary-foreground/10 rounded p-1.5 text-center">
+              <div className="text-base font-bold leading-tight text-white">{v}</div>
+              <div className="text-[9px] uppercase tracking-wider opacity-70 leading-tight text-white">{k}</div>
             </div>
           ))}
         </div>
