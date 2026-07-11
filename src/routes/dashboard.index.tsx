@@ -96,7 +96,7 @@ function Dashboard() {
 
           {save.status === "active" && (
             <div className="pt-4">
-              <Button variant="ghost" onClick={() => {
+              <Button variant="ghost" className="text-danger" onClick={() => {
                 if (confirm("Yakin ingin pensiun? Karier akan berakhir.")) retire(save.id);
               }}>
                 Pensiun sekarang

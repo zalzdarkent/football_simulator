@@ -2,6 +2,7 @@ import { chance, pick, range, uid, type RNG } from "./rng";
 import type { AwardRecord, Offer, SeasonEndResult, TrophyRecord, Save, Position } from "./types";
 import { CLUBS, clubById, clubsByLeague } from "../../data/clubs";
 import { COMPETITIONS } from "../../data/awards";
+import { generateLeagueStandings } from "./league";
 
 // Season-end: compute league position, trophies, awards, transfer offers
 export function rollSeasonEnd(save: Save, rng: RNG): SeasonEndResult {
@@ -10,10 +11,9 @@ export function rollSeasonEnd(save: Save, rng: RNG): SeasonEndResult {
   const stats = save.season.currentStats;
   const avgRating = stats.ratingCount ? stats.ratingSum / stats.ratingCount : 6.5;
 
-  // League finish: depends on club tier + player contribution
-  const baseFinish = club.tier === 1 ? range(1, 4, rng) : club.tier === 2 ? range(3, 8, rng) : club.tier === 3 ? range(6, 14, rng) : range(10, 18, rng);
-  const playerBoost = Math.round((avgRating - 6.5) * 2 + stats.goals / 8);
-  const leaguePosition = Math.max(1, Math.min(20, baseFinish - playerBoost));
+  // Use actual league position from standings
+  const standings = generateLeagueStandings(save);
+  const leaguePosition = standings.findIndex(row => row.clubId === club.id) + 1;
 
   const trophies: TrophyRecord[] = [];
   // domestic league

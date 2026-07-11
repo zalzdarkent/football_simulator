@@ -4,10 +4,41 @@ import { query } from "../db.js";
 export const savesRouter = Router();
 
 savesRouter.get("/session/:sessionId", async (req, res) => {
-  const { rows } = await query<{ id: string; data: unknown; created_at: string; updated_at: string }>(
-    "SELECT id, data, created_at, updated_at FROM saves WHERE session_id = $1 ORDER BY updated_at DESC",
-    [req.params.sessionId],
+  const { sessionId } = req.params;
+  
+  // First, get the user_id from the session
+  const sessionResult = await query<{ user_id: string | null }>(
+    "SELECT user_id FROM sessions WHERE id = $1",
+    [sessionId]
   );
+  
+  if (!sessionResult.rows[0]) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+  
+  const userId = sessionResult.rows[0].user_id;
+  
+  let rows: { id: string; data: unknown; created_at: string; updated_at: string }[];
+  if (userId) {
+    // If user is logged in, get all saves from all sessions of this user
+    const result = await query<{ id: string; data: unknown; created_at: string; updated_at: string }>(
+      `SELECT s.id, s.data, s.created_at, s.updated_at 
+       FROM saves s
+       JOIN sessions sess ON s.session_id = sess.id
+       WHERE sess.user_id = $1
+       ORDER BY s.updated_at DESC`,
+      [userId]
+    );
+    rows = result.rows;
+  } else {
+    // Anonymous session, only get saves from this session
+    const result = await query<{ id: string; data: unknown; created_at: string; updated_at: string }>(
+      "SELECT id, data, created_at, updated_at FROM saves WHERE session_id = $1 ORDER BY updated_at DESC",
+      [sessionId]
+    );
+    rows = result.rows;
+  }
+  
   res.json(rows.map((r) => r.data));
 });
 

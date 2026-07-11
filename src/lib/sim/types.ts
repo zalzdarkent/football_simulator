@@ -106,6 +106,8 @@ export type SpinLogEntry = {
   season: number;
   at: number;
   summary: string;
+  opponentName?: string;
+  matchType?: "league" | "cup" | "international";
 };
 
 export type MatchSpinResult = {

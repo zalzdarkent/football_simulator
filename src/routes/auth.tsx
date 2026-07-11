@@ -55,12 +55,15 @@ function AuthPage() {
       toast.success(isLogin ? "Login berhasil!" : "Registrasi berhasil!");
       
       const state = useStore.getState();
-      if (state.activeSaveId) {
+      console.log("After hydrate:", { saves: state.saves.length, activeSaveId: state.activeSaveId });
+      
+      if (state.saves.length > 0) {
+        // If user has saves, go to dashboard
+        // If no active save is set, the dashboard will handle it
         navigate({ to: "/dashboard" });
-      } else if (state.saves.length === 0) {
-        navigate({ to: "/new" });
       } else {
-        navigate({ to: "/" });
+        // No saves, go to create new player
+        navigate({ to: "/new" });
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Terjadi kesalahan");

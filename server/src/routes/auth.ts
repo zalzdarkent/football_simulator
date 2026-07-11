@@ -99,13 +99,28 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Create session
-    const sessionResult = await query(
-      "INSERT INTO sessions (user_id) VALUES ($1) RETURNING id",
+    // Check if user has existing session
+    const existingSessionResult = await query(
+      "SELECT id, active_save_id FROM sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1",
       [user.id]
     );
 
-    const session = sessionResult.rows[0];
+    let session;
+    if (existingSessionResult.rows.length > 0) {
+      // Reuse existing session
+      session = existingSessionResult.rows[0];
+      console.log("Reusing existing session:", session.id, "activeSaveId:", session.active_save_id);
+      // Update session timestamp
+      await query("UPDATE sessions SET updated_at = NOW() WHERE id = $1", [session.id]);
+    } else {
+      // Create new session
+      console.log("Creating new session for user:", user.id);
+      const sessionResult = await query(
+        "INSERT INTO sessions (user_id) VALUES ($1) RETURNING id",
+        [user.id]
+      );
+      session = sessionResult.rows[0];
+    }
 
     // Log activity
     await query(
@@ -122,6 +137,7 @@ router.post("/login", async (req, res) => {
       session: {
         id: session.id,
         userId: user.id,
+        activeSaveId: session.active_save_id,
       },
     });
   } catch (error) {

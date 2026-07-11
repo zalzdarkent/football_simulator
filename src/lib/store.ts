@@ -294,13 +294,16 @@ function applyMatchResult(
           milestones.push({ id: uid(), type: "goals", label: `Mencapai ${mark} gol karier`, season: sv.season.index });
         }
       }
+      const opp = clubById(rolled.result.opponentClubId)!;
       const log: SpinLogEntry = {
         id: uid(), type: "match", season: sv.season.index, at: Date.now(),
         summary: rolled.result.selection === "injured"
-          ? "Cedera, absen"
+          ? `Cedera, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
           : rolled.result.selection === "suspended"
-          ? "Sanksi kartu, absen"
+          ? `Sanksi kartu, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
           : `${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst} • ${rolled.result.goals}G ${rolled.result.assists}A rating ${rolled.result.rating}`,
+        opponentName: opp.name,
+        matchType: "league",
       };
       return {
         ...sv,

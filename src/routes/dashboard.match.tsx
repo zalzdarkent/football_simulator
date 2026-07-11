@@ -56,6 +56,8 @@ function MatchSpin() {
 
   const club = clubById(save.currentClub.clubId)!;
   const opp = preview ? clubById(preview.result.opponentClubId) : null;
+  
+  const matchHistory = save.spinLog.filter(entry => entry.type === "match" && entry.season === save.season.index);
 
   return (
     <main className="max-w-4xl mx-auto p-6">
@@ -193,6 +195,63 @@ function MatchSpin() {
             Re-roll gratis sepuasnya. Hasil hanya final setelah kamu klik Konfirmasi.
           </p>
         </div>
+      )}
+
+      {matchHistory.length > 0 && (
+        <Card className="bg-card-gradient border-border/60 mt-6">
+          <CardContent className="p-4">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Riwayat Pertandingan</div>
+            <div className="max-h-64 overflow-y-auto pr-2">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-border/40 text-xs text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">Match</th>
+                    <th className="text-left py-2 px-2 font-medium">Hasil</th>
+                    <th className="text-left py-2 px-2 font-medium">Skor</th>
+                    <th className="text-left py-2 px-2 font-medium">Lawan</th>
+                    <th className="text-left py-2 px-2 font-medium">Tipe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchHistory.slice(0, 10).map((entry) => {
+                    const summary = entry.summary;
+                    const resultMatch = summary.match(/(?:•\s*)?(W|D|L)\s+(\d+)-(\d+)/);
+                    let result = resultMatch ? resultMatch[1] : null;
+                    const score = resultMatch ? `${resultMatch[2]}-${resultMatch[3]}` : summary;
+                    
+                    // Fix: if score shows draw but result is L/D, correct the result
+                    if (resultMatch && resultMatch[2] === resultMatch[3]) {
+                      result = 'D';
+                    } else if (resultMatch && parseInt(resultMatch[2]) > parseInt(resultMatch[3])) {
+                      result = 'W';
+                    } else if (resultMatch && parseInt(resultMatch[2]) < parseInt(resultMatch[3])) {
+                      result = 'L';
+                    }
+                    
+                    return (
+                      <tr key={entry.id} className="border-b border-border/20 last:border-0 hover:bg-accent/50">
+                        <td className="py-2 px-2 text-muted-foreground">M{entry.season}</td>
+                        <td className="py-2 px-2">
+                          <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                            result === 'W' ? 'bg-primary/20 text-primary' :
+                            result === 'L' ? 'bg-destructive/20 text-destructive' :
+                            result === 'D' ? 'bg-secondary/50 text-secondary-foreground' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {result || '—'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 font-medium">{score}</td>
+                        <td className="py-2 px-2 text-muted-foreground">{entry.opponentName || '—'}</td>
+                        <td className="py-2 px-2 text-muted-foreground capitalize">{entry.matchType || '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </main>
   );

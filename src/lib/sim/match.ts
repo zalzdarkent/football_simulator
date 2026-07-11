@@ -142,13 +142,9 @@ export function rollMatch(save: Save, rng: RNG): { result: MatchSpinResult; news
 
   const newsKey =
     red ? "card_red" :
-    goals >= 3 ? "hattrick" :
-    goals === 2 ? "brace" :
-    goals === 1 ? "goal" :
-    assists >= 2 ? "assist" :
     teamResult === "L" ? "loss" :
     teamResult === "D" ? "draw" :
-    teamResult === "W" ? "win" :
+    teamResult === "W" ? (goals >= 3 ? "hattrick" : goals === 2 ? "brace" : goals === 1 ? "goal" : assists >= 2 ? "assist" : "win") :
     motm ? "motm" : "draw";
 
   const news = mkNews(save, result, newsKey, rng);
