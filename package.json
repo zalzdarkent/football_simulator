@@ -11,7 +11,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "fetch:football": "bun scripts/fetch-football-data.ts",
+    "convert:football": "bun scripts/convert-api-data.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

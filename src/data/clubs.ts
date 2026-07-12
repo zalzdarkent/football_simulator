@@ -32,13 +32,30 @@ export type Club = {
   tier: 1 | 2 | 3 | 4; // 1 = elite
   reputation: number; // 1-100
   colors: [string, string]; // primary, secondary hex
+  logoUrl: string; // <-- Tambahkan properti baru ini
 };
 
 const c = (
   id: string, name: string, short: string, league: LeagueId,
   city: string, tier: 1 | 2 | 3 | 4, reputation: number,
   colors: [string, string]
-): Club => ({ id, name, short, league, city, tier, reputation, colors });
+): Club => {
+  // Melakukan encode nama klub agar aman digunakan di URL query string
+  const encodedName = encodeURIComponent(name);
+  
+  return { 
+    id, 
+    name, 
+    short, 
+    league, 
+    city, 
+    tier, 
+    reputation, 
+    colors,
+    // Menghasilkan URL gambar langsung dari API terbuka TheSportsDB menggunakan query nama
+    logoUrl: `https://www.thesportsdb.com/api/v1/json/123/searchteams.php?t=${encodedName}`
+  };
+};
 
 export const CLUBS: Club[] = [
   // EPL
