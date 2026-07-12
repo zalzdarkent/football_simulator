@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRequireSave } from "../hooks/use-require-save";
 import { clubById } from "../data/clubs";
+import { api } from "../lib/api";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 
 export const Route = createFileRoute("/dashboard/transfers")({
@@ -14,6 +16,18 @@ const TYPE_LABEL: Record<string, string> = {
 
 function Transfers() {
   const save = useRequireSave();
+  const [clubs, setClubs] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    api.getClubs().then((data) => {
+      const clubMap: Record<string, any> = {};
+      data.forEach((club: any) => {
+        clubMap[club.id] = club;
+      });
+      setClubs(clubMap);
+    }).catch(console.error);
+  }, []);
+
   if (!save) return null;
   const list = [...save.transfers].sort((a, b) => b.season - a.season);
   return (
@@ -21,8 +35,8 @@ function Transfers() {
       <h1 className="text-3xl font-display font-extrabold mb-6">Riwayat Transfer</h1>
       <div className="space-y-3">
         {list.map((t) => {
-          const from = t.fromClubId ? clubById(t.fromClubId) : null;
-          const to = clubById(t.toClubId)!;
+          const from = t.fromClubId ? (clubs[t.fromClubId] || clubById(t.fromClubId)) : null;
+          const to = clubs[t.toClubId] || clubById(t.toClubId)!;
           return (
             <Card key={t.id} className="bg-card-gradient border-border/60">
               <CardContent className="p-4">
@@ -51,12 +65,25 @@ function Transfers() {
   );
 }
 
-function Badge({ club }: { club: ReturnType<typeof clubById> | null }) {
+function Badge({ club }: { club: any }) {
   if (!club) return <span className="text-xs text-muted-foreground">— Debut —</span>;
   return (
     <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-md flex items-center justify-center text-[10px] font-display font-bold"
-        style={{ backgroundColor: club.colors[0], color: club.colors[1] }}>
+      {club.logoUrl ? (
+        <img
+          src={club.logoUrl}
+          alt={club.name}
+          className="w-8 h-8 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      ) : null}
+      <div
+        className={`w-8 h-8 rounded-md flex items-center justify-center text-[10px] font-display font-bold ${club.logoUrl ? 'hidden' : ''}`}
+        style={{ backgroundColor: club.colors?.[0] || club.colorPrimary, color: club.colors?.[1] || club.colorSecondary }}
+      >
         {club.short}
       </div>
       <span className="text-sm">{club.name}</span>

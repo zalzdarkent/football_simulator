@@ -9,7 +9,11 @@
     "db:seed": "tsx src/run-seed.ts",
     "db:reseed": "tsx src/reseed.ts",
     "sync:clubs": "tsx src/sync-football-data.ts",
-    "sync:players": "tsx src/sync-players.ts"
+    "sync:players": "tsx src/sync-players.ts",
+    "update:club-ids": "tsx src/update-club-ids.ts",
+    "check:logos": "tsx src/check-null-logos.ts",
+    "update:logos": "tsx src/update-missing-logos.ts",
+    "check:arsenal": "tsx src/check-arsenal.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

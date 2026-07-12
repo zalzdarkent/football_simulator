@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRequireSave } from "../hooks/use-require-save";
 import { useStore } from "../lib/store";
 import { clubById } from "../data/clubs";
+import { api } from "../lib/api";
 import { competitionById, AWARDS } from "../data/awards";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -21,6 +22,17 @@ function SeasonEnd() {
 
   const [result, setResult] = useState<SeasonEndResult | null>(null);
   const [chosen, setChosen] = useState<Offer | { kind: "stay" } | null>(null);
+  const [clubs, setClubs] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    api.getClubs().then((data) => {
+      const clubMap: Record<string, any> = {};
+      data.forEach((club: any) => {
+        clubMap[club.id] = club;
+      });
+      setClubs(clubMap);
+    }).catch(console.error);
+  }, []);
 
   if (!save) return null;
 
@@ -164,18 +176,31 @@ function SeasonEnd() {
   );
 }
 
-function OfferCard({ label, subtitle, clubId, selected, onClick }: {
-  label: string; subtitle: string; clubId: string; selected: boolean | null; onClick: () => void;
+function OfferCard({ label, subtitle, clubId, selected, onClick, clubData }: {
+  label: string; subtitle: string; clubId: string; selected: boolean | null; onClick: () => void; clubData?: Record<string, any>;
 }) {
-  const c = clubById(clubId)!;
+  const c = clubData?.[clubId] || clubById(clubId)!;
   return (
     <button onClick={onClick}
       className={`text-left rounded-lg border p-3 flex items-center gap-3 transition-all ${
         selected ? "border-primary bg-panel-2" : "border-border hover:bg-accent"
       }`}
     >
-      <div className="w-10 h-10 rounded-md flex items-center justify-center font-display font-bold text-sm"
-        style={{ backgroundColor: c.colors[0], color: c.colors[1] }}>
+      {c.logoUrl ? (
+        <img
+          src={c.logoUrl}
+          alt={c.name}
+          className="w-10 h-10 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      ) : null}
+      <div
+        className={`w-10 h-10 rounded-md flex items-center justify-center font-display font-bold text-sm ${c.logoUrl ? 'hidden' : ''}`}
+        style={{ backgroundColor: c.colors?.[0] || c.colorPrimary, color: c.colors?.[1] || c.colorSecondary }}
+      >
         {c.short}
       </div>
       <div className="flex-1 min-w-0">

@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRequireSave } from "../hooks/use-require-save";
 import { useStore } from "../lib/store";
 import { clubById } from "../data/clubs";
+import { api } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 
@@ -21,6 +22,17 @@ function MatchSpin() {
   const [spinning, setSpinning] = useState(false);
   const [preview, setPreview] = useState<ReturnType<typeof previewMatch>>(null);
   const [reveal, setReveal] = useState(0); // 0..4
+  const [clubs, setClubs] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    api.getClubs().then((data) => {
+      const clubMap: Record<string, any> = {};
+      data.forEach((club: any) => {
+        clubMap[club.id] = club;
+      });
+      setClubs(clubMap);
+    }).catch(console.error);
+  }, []);
 
   if (!save) return null;
   if (save.season.matchday >= save.season.totalMatches) {
@@ -97,7 +109,7 @@ function MatchSpin() {
           <Card className="bg-card-gradient border-border/60 overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-center justify-center gap-6 text-center">
-                <ClubBadge id={club.id} />
+                <ClubBadge id={club.id} clubData={clubs[club.id] || club} />
                 <div>
                   <div className="text-xs uppercase tracking-widest text-muted-foreground">
                     {preview.result.home ? "Kandang" : "Tandang"}
@@ -127,7 +139,7 @@ function MatchSpin() {
                     )}
                   </AnimatePresence>
                 </div>
-                <ClubBadge id={opp.id} />
+                <ClubBadge id={opp.id} clubData={clubs[opp.id] || opp} />
               </div>
 
               <AnimatePresence>
@@ -257,13 +269,24 @@ function MatchSpin() {
   );
 }
 
-function ClubBadge({ id }: { id: string }) {
-  const c = clubById(id)!;
+function ClubBadge({ id, clubData }: { id: string; clubData?: any }) {
+  const c = clubData || clubById(id)!;
   return (
     <div className="flex flex-col items-center">
+      {c.logoUrl ? (
+        <img
+          src={c.logoUrl}
+          alt={c.name}
+          className="w-16 h-16 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+      ) : null}
       <div
-        className="w-16 h-16 rounded-xl flex items-center justify-center font-display font-bold text-lg"
-        style={{ backgroundColor: c.colors[0], color: c.colors[1] }}
+        className={`w-16 h-16 rounded-xl flex items-center justify-center font-display font-bold text-lg ${c.logoUrl ? 'hidden' : ''}`}
+        style={{ backgroundColor: c.colors?.[0] || c.colorPrimary, color: c.colors?.[1] || c.colorSecondary }}
       >
         {c.short}
       </div>

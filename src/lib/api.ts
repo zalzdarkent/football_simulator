@@ -46,6 +46,11 @@ export const api = {
 
   deleteSave: (id: string) =>
     request<void>(`/saves/${id}`, { method: "DELETE" }),
+
+  getClubs: (league?: string, tier?: number) =>
+    request<any[]>("/clubs" + (league ? `?league=${league}` : "") + (tier ? `&tier=${tier}` : "")),
+
+  getClub: (id: string) => request<any>(`/clubs/${id}`),
 };
 
 const SESSION_KEY = "fcs-session-id";
