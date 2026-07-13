@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
-import { COUNTRIES } from "../lib/store";
+import { COUNTRIES, LEAGUES } from "../lib/store";
 import { CLUBS, clubsByTier } from "../lib/store";
 import { POSITIONS } from "../lib/sim/types";
 import type { Foot, Position } from "../lib/sim/types";
@@ -12,7 +12,13 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 export const Route = createFileRoute("/new")({
   head: () => ({ meta: [{ title: "Buat Pemain Baru — Become a Legend" }] }),
@@ -46,7 +52,15 @@ function NewCareer() {
     const attributes = genInitialAttributes(position, age, rng);
     const club = CLUBS.find((c) => c.id === clubId)!;
     return {
-      player: { name: name || "Pemain Baru", countryCode, position, age, height, foot, avatarSeed: "" },
+      player: {
+        name: name || "Pemain Baru",
+        countryCode,
+        position,
+        age,
+        height,
+        foot,
+        avatarSeed: "",
+      },
       attributes,
       currentClub: { clubId: club.id, shirtNumber: 10, wage: 20, contractUntilSeason: 3 },
     };
@@ -70,19 +84,30 @@ function NewCareer() {
               <div className="space-y-5">
                 <h2 className="font-display font-bold text-xl">Identitas</h2>
                 <Field label="Nama pemain">
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Rizki Pratama" />
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="cth. Rizki Pratama"
+                  />
                 </Field>
                 <Field label="Negara">
                   <Select value={countryCode} onValueChange={setCountryCode}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {COUNTRIES.map((c) => (
                         <SelectItem key={c.code} value={c.code}>
                           <span className="flex items-center gap-2">
-                            {c.flag
-                              ? <img src={c.flag} alt={c.code} className="w-5 h-3.5 object-cover rounded-sm" />
-                              : <span className="w-5">🏳️</span>
-                            }
+                            {c.flag ? (
+                              <img
+                                src={c.flag}
+                                alt={c.code}
+                                className="w-5 h-3.5 object-cover rounded-sm"
+                              />
+                            ) : (
+                              <span className="w-5">🏳️</span>
+                            )}
                             {c.name}
                           </span>
                         </SelectItem>
@@ -92,16 +117,30 @@ function NewCareer() {
                 </Field>
                 <div className="grid grid-cols-3 gap-4">
                   <Field label="Umur">
-                    <Input type="number" min={16} max={22} value={age}
-                      onChange={(e) => setAge(Math.max(16, Math.min(22, +e.target.value || 17)))} />
+                    <Input
+                      type="number"
+                      min={16}
+                      max={22}
+                      value={age}
+                      onChange={(e) => setAge(Math.max(16, Math.min(22, +e.target.value || 17)))}
+                    />
                   </Field>
                   <Field label="Tinggi (cm)">
-                    <Input type="number" min={160} max={205} value={height}
-                      onChange={(e) => setHeight(Math.max(160, Math.min(205, +e.target.value || 180)))} />
+                    <Input
+                      type="number"
+                      min={160}
+                      max={205}
+                      value={height}
+                      onChange={(e) =>
+                        setHeight(Math.max(160, Math.min(205, +e.target.value || 180)))
+                      }
+                    />
                   </Field>
                   <Field label="Kaki dominan">
                     <Select value={foot} onValueChange={(v) => setFoot(v as Foot)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Right">Kanan</SelectItem>
                         <SelectItem value="Left">Kiri</SelectItem>
@@ -111,7 +150,9 @@ function NewCareer() {
                   </Field>
                 </div>
                 <div className="flex justify-end">
-                  <Button onClick={() => setStep(2)} disabled={!name.trim()}>Lanjut</Button>
+                  <Button onClick={() => setStep(2)} disabled={!name.trim()}>
+                    Lanjut
+                  </Button>
                 </div>
               </div>
             )}
@@ -135,7 +176,9 @@ function NewCareer() {
                   ))}
                 </div>
                 <div className="flex justify-between">
-                  <Button variant="ghost" onClick={() => setStep(1)}>Kembali</Button>
+                  <Button variant="ghost" onClick={() => setStep(1)}>
+                    Kembali
+                  </Button>
                   <Button onClick={() => setStep(3)}>Lanjut</Button>
                 </div>
               </div>
@@ -159,14 +202,26 @@ function NewCareer() {
                         }`}
                       >
                         <div
-                          className="w-12 h-12 rounded-md flex items-center justify-center font-display font-bold"
+                          className="w-12 h-12 rounded-md flex items-center justify-center font-display font-bold shrink-0 overflow-hidden relative"
                           style={{ backgroundColor: c.colors[0], color: c.colors[1] }}
                         >
-                          {c.short}
+                          {c.logoUrl && (
+                            <img
+                              src={c.logoUrl}
+                              alt={c.name}
+                              className="absolute inset-0 w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                              }}
+                            />
+                          )}
+                          <span>{c.short}</span>
                         </div>
                         <div className="flex-1">
                           <div className="font-medium">{c.name}</div>
-                          <div className="text-xs text-muted-foreground">{c.city} • Tier {c.tier} • Reputation {c.reputation}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {LEAGUES.find((l: any) => l.id === c.league)?.name ?? c.league}
+                          </div>
                         </div>
                         {selected && <span className="text-primary">✓</span>}
                       </button>
@@ -174,7 +229,9 @@ function NewCareer() {
                   })}
                 </div>
                 <div className="flex justify-between">
-                  <Button variant="ghost" onClick={() => setStep(2)}>Kembali</Button>
+                  <Button variant="ghost" onClick={() => setStep(2)}>
+                    Kembali
+                  </Button>
                   <Button onClick={submit}>Mulai Karier</Button>
                 </div>
               </div>
@@ -183,7 +240,9 @@ function NewCareer() {
         </Card>
 
         <div>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Preview Kartu</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
+            Preview Kartu
+          </div>
           <PlayerCard save={previewSave} size="md" />
         </div>
       </div>
@@ -194,7 +253,9 @@ function NewCareer() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">{label}</Label>
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+        {label}
+      </Label>
       {children}
     </div>
   );
