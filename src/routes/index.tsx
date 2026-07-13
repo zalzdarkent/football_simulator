@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useStore } from "../lib/store";
-import { clubById } from "../data/clubs";
-import { countryByCode } from "../data/countries";
+import { useStore, clubById } from "../lib/store";
+import { countryByCode } from "../lib/store";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { PlayerCard } from "../components/PlayerCard";

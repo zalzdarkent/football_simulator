@@ -1,6 +1,6 @@
 import { chance, pick, range, uid, weighted, mulberry32, type RNG } from "./rng";
 import type { MatchSpinResult, NewsItem, Position, Save, SocialPost } from "./types";
-import { CLUBS, clubById, clubsByLeague, type Club } from "../../data/clubs";
+import { CLUBS, clubById, clubsByLeague, type Club } from "../store";
 import { NEWS, SOCIAL } from "../../data/templates";
 
 const tpl = (arr: string[], rng: RNG, vars: Record<string, string | number>) => {

@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useActiveSave } from "../lib/store";
-import { clubById } from "../data/clubs";
+import { clubById } from "../lib/store";
 import { getStoredUsername, clearAuth } from "../lib/api";
 import { Button } from "./ui/button";
 

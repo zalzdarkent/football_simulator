@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRequireSave } from "../hooks/use-require-save";
 import { useStore } from "../lib/store";
-import { clubById } from "../data/clubs";
+import { clubById } from "../lib/store";
 import { api } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";

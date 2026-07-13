@@ -1,5 +1,5 @@
 import { type Save } from "./types";
-import { clubById, clubsByLeague } from "../../data/clubs";
+import { clubById, clubsByLeague } from "../store";
 import { mulberry32, range } from "./rng";
 
 export type StandingRow = {

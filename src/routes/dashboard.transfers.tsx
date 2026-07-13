@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRequireSave } from "../hooks/use-require-save";
-import { clubById } from "../data/clubs";
+import { clubById } from "../lib/store";
 import { api } from "../lib/api";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";

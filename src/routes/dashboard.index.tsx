@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useActiveSave, useStore } from "../lib/store";
 import { useRequireSave } from "../hooks/use-require-save";
-import { clubById } from "../data/clubs";
+import { clubById } from "../lib/store";
 import { PlayerCard } from "../components/PlayerCard";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -18,7 +18,13 @@ function Dashboard() {
   const retire = useStore((s) => s.retire);
   if (!save) return null;
 
-  const club = clubById(save.currentClub.clubId)!;
+  const club = clubById(save.currentClub.clubId);
+  if (!club) return (
+    <main className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center gap-4">
+      <p className="text-muted-foreground">Karier ini menggunakan data klub yang sudah tidak ada (sistem lama). Silakan buat karier baru.</p>
+      <Button onClick={() => navigate({ to: "/" })}>Kembali ke Beranda</Button>
+    </main>
+  );
   const cs = save.season.currentStats;
   const avgRating = cs.ratingCount ? (cs.ratingSum / cs.ratingCount).toFixed(2) : "—";
   const seasonProgress = (save.season.matchday / save.season.totalMatches) * 100;

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { clubById } from "../data/clubs";
-import { countryByCode } from "../data/countries";
+import { clubById, countryByCode } from "../lib/store";
 import { POSITION_LABEL } from "../lib/sim/types";
 import type { Save } from "../lib/sim/types";
 
@@ -11,20 +10,7 @@ type Props = {
 
 export function PlayerCard({ save, size = "md" }: Props) {
   const club = clubById(save.currentClub.clubId);
-  const [realLogo, setRealLogo] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!club?.logoUrl) return;
-
-    fetch(club.logoUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.teams && data.teams[0]) {
-          setRealLogo(data.teams[0].strBadge);
-        }
-      })
-      .catch((err) => console.error("Gagal memuat logo:", err));
-  }, [club]);
+  const realLogo = club?.logoUrl || null;
   const country = countryByCode(save.player.countryCode);
   const ovr = save.attributes.overall;
   const isGold = ovr >= 75;

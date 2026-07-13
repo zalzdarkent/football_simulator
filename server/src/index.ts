@@ -2,13 +2,13 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { migrate } from "./migrate.js";
-import { seed } from "./seed.js";
 import { pool } from "./db.js";
 import { referenceRouter } from "./routes/reference.js";
 import { sessionRouter } from "./routes/session.js";
 import { savesRouter } from "./routes/saves.js";
 import { authRouter } from "./routes/auth.js";
 import { gameRouter } from "./routes/game.js";
+import { masterRouter } from "./routes/master.js";
 
 dotenv.config();
 
@@ -33,10 +33,10 @@ app.use("/api", gameRouter);
 app.use("/api/session", sessionRouter);
 app.use("/api/saves", savesRouter);
 app.use("/api/auth", authRouter);
+app.use("/api", masterRouter);
 
 async function start() {
   await migrate();
-  await seed();
 
   app.listen(port, () => {
     console.log(`FCS API running on http://localhost:${port}`);

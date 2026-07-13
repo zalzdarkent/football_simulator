@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
-import { COUNTRIES } from "../data/countries";
-import { CLUBS, clubsByTier } from "../data/clubs";
+import { COUNTRIES } from "../lib/store";
+import { CLUBS, clubsByTier } from "../lib/store";
 import { POSITIONS } from "../lib/sim/types";
 import type { Foot, Position } from "../lib/sim/types";
 import { genInitialAttributes } from "../lib/sim/attributes";
@@ -78,7 +78,13 @@ function NewCareer() {
                     <SelectContent>
                       {COUNTRIES.map((c) => (
                         <SelectItem key={c.code} value={c.code}>
-                          {c.flag} {c.name}
+                          <span className="flex items-center gap-2">
+                            {c.flag
+                              ? <img src={c.flag} alt={c.code} className="w-5 h-3.5 object-cover rounded-sm" />
+                              : <span className="w-5">🏳️</span>
+                            }
+                            {c.name}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>

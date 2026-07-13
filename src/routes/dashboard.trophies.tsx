@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRequireSave } from "../hooks/use-require-save";
-import { clubById } from "../data/clubs";
-import { competitionById, AWARDS } from "../data/awards";
+import { clubById } from "../lib/store";
+import { competitionById, AWARDS } from "../lib/store";
 import { Card, CardContent } from "../components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 

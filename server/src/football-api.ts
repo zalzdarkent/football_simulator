@@ -225,6 +225,15 @@ export const footballApi = {
     return data.response;
   },
 
+  // Get teams by numeric league ID
+  getTeamsById: async (leagueId: number, season: number = 2024) => {
+    const data = await request<ApiResponse<Team>>(`/teams`, {
+      league: leagueId.toString(),
+      season: season.toString(),
+    });
+    return data.response;
+  },
+
   // Get team by ID
   getTeam: async (teamId: number) => {
     const data = await request<ApiResponse<Team>>(`/teams`, {
@@ -256,6 +265,12 @@ export const footballApi = {
     const data = await request<ApiResponse<Player>>(`/players`, {
       search: name,
     });
+    return data.response;
+  },
+
+  // Get countries
+  getCountries: async () => {
+    const data = await request<ApiResponse<any>>(`/countries`);
     return data.response;
   },
 

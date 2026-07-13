@@ -8,8 +8,28 @@ import { mulberry32, randSeed, uid, range as rr } from "./sim/rng";
 import { genInitialAttributes, ageAdjustment, computeOverall } from "./sim/attributes";
 import { rollMatch } from "./sim/match";
 import { rollSeasonEnd, shouldRetire } from "./sim/season";
-import { CLUBS, clubById, clubsByTier } from "../data/clubs";
-import { AWARDS } from "../data/awards";
+export let CLUBS: any[] = [];
+export let LEAGUES: any[] = [];
+export let COUNTRIES: any[] = [];
+export let AWARDS: any = {};
+export let COMPETITIONS: any[] = [];
+
+export function competitionById(id: string) {
+  return COMPETITIONS.find((c) => c.id === id);
+}
+
+export function clubById(id: string) {
+  return CLUBS.find((c) => c.id === id);
+}
+export function clubsByLeague(leagueId: string) {
+  return CLUBS.filter((c) => c.league === leagueId);
+}
+export function clubsByTier(tier: number) {
+  return CLUBS.filter((c) => c.tier === tier);
+}
+export function countryByCode(code: string) {
+  return COUNTRIES.find((c) => c.code === code || c.code === code.substring(0, 2));
+}
 import { api, ensureSession } from "./api";
 
 type Store = {
@@ -79,6 +99,27 @@ export const useStore = create<Store>()((set, get) => ({
     try {
       const session = await ensureSession();
       const saves = await api.listSaves(session.sessionId);
+      
+      const masterRes = await fetch("http://localhost:3001/api/master");
+      if (masterRes.ok) {
+        const data = await masterRes.json();
+        CLUBS = data.clubs.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          short: c.short,
+          league: c.league_id,
+          colors: [c.color_primary, c.color_secondary],
+          logoUrl: c.logo_url,
+          tier: c.tier,
+        }));
+        LEAGUES = data.leagues;
+        COUNTRIES = data.countries;
+        COMPETITIONS = data.competitions;
+        data.awards.forEach((a: any) => {
+          AWARDS[a.id] = a;
+        });
+      }
+
       set({
         saves,
         activeSaveId: session.activeSaveId,
@@ -458,5 +499,3 @@ export const useActiveSave = () => {
   const { saves, activeSaveId } = useStore();
   return saves.find((x) => x.id === activeSaveId) ?? null;
 };
-
-export { clubById, CLUBS, clubsByTier, AWARDS };

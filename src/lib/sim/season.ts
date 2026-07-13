@@ -1,7 +1,7 @@
 import { chance, pick, range, uid, type RNG } from "./rng";
 import type { AwardRecord, Offer, SeasonEndResult, TrophyRecord, Save, Position } from "./types";
-import { CLUBS, clubById, clubsByLeague } from "../../data/clubs";
-import { COMPETITIONS } from "../../data/awards";
+import { CLUBS, clubById, clubsByLeague } from "../store";
+import { COMPETITIONS } from "../store";
 import { generateLeagueStandings } from "./league";
 
 // Season-end: compute league position, trophies, awards, transfer offers

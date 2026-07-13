@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRequireSave } from "../hooks/use-require-save";
-import { clubById } from "../data/clubs";
+import { clubById } from "../lib/store";
 import { Card, CardContent } from "../components/ui/card";
 
 export const Route = createFileRoute("/dashboard/stats")({
