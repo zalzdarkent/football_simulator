@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useRequireSave } from "../hooks/use-require-save";
 import { generateLeagueStandings } from "../lib/sim/league";
 import { clubById } from "../lib/store";
