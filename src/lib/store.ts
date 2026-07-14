@@ -1,7 +1,16 @@
 import { create } from "zustand";
 import type {
-  Save, MatchSpinResult, NewsItem, SocialPost, SeasonEndResult,
-  Offer, TransferRecord, Position, Foot, MilestoneRecord, SpinLogEntry,
+  Save,
+  MatchSpinResult,
+  NewsItem,
+  SocialPost,
+  SeasonEndResult,
+  Offer,
+  TransferRecord,
+  Position,
+  Foot,
+  MilestoneRecord,
+  SpinLogEntry,
 } from "./sim/types";
 import { emptySeasonStats } from "./sim/types";
 import { mulberry32, randSeed, uid, range as rr } from "./sim/rng";
@@ -41,20 +50,39 @@ type Store = {
 
   hydrate: () => Promise<void>;
   createSave: (input: {
-    name: string; countryCode: string; position: Position;
-    age: number; height: number; foot: Foot; clubId: string;
+    name: string;
+    countryCode: string;
+    position: Position;
+    age: number;
+    height: number;
+    foot: Foot;
+    clubId: string;
   }) => Promise<string>;
   deleteSave: (id: string) => Promise<void>;
   renameSave: (id: string, name: string) => Promise<void>;
   setActive: (id: string | null) => Promise<void>;
   importSave: (data: Save) => Promise<void>;
 
-  previewMatch: (saveId: string) => { result: MatchSpinResult; news: NewsItem; social?: SocialPost; opponentName: string } | null;
-  confirmMatch: (saveId: string, rolled: { result: MatchSpinResult; news: NewsItem; social?: SocialPost }) => void;
+  previewMatch: (
+    saveId: string,
+  ) => {
+    result: MatchSpinResult;
+    news: NewsItem;
+    social?: SocialPost;
+    opponentName: string;
+  } | null;
+  confirmMatch: (
+    saveId: string,
+    rolled: { result: MatchSpinResult; news: NewsItem; social?: SocialPost },
+  ) => void;
   clearPending: (saveId: string) => void;
 
   previewSeasonEnd: (saveId: string) => SeasonEndResult | null;
-  confirmSeasonAndOffer: (saveId: string, chosen: Offer | { kind: "stay" }, result: SeasonEndResult) => void;
+  confirmSeasonAndOffer: (
+    saveId: string,
+    chosen: Offer | { kind: "stay" },
+    result: SeasonEndResult,
+  ) => void;
 
   retire: (saveId: string) => void;
 };
@@ -99,7 +127,7 @@ export const useStore = create<Store>()((set, get) => ({
     try {
       const session = await ensureSession();
       const saves = await api.listSaves(session.sessionId);
-      
+
       const masterRes = await fetch("http://localhost:3001/api/master");
       if (masterRes.ok) {
         const data = await masterRes.json();
@@ -111,6 +139,7 @@ export const useStore = create<Store>()((set, get) => ({
           colors: [c.color_primary, c.color_secondary],
           logoUrl: c.logo_url,
           tier: c.tier,
+          reputation: c.reputation,
         }));
         LEAGUES = data.leagues;
         COUNTRIES = data.countries;
@@ -164,25 +193,48 @@ export const useStore = create<Store>()((set, get) => ({
       season: { index: 1, matchday: 0, totalMatches: 38, currentStats: emptySeasonStats() },
       careerStats: { apps: 0, goals: 0, assists: 0, cleanSheets: 0, trophies: 0, awards: 0 },
       history: [],
-      transfers: [{
-        id: uid(), fromClubId: null, toClubId: club.id, season: 1,
-        type: "signed", fee: 0, wage,
-      }],
+      transfers: [
+        {
+          id: uid(),
+          fromClubId: null,
+          toClubId: club.id,
+          season: 1,
+          type: "signed",
+          fee: 0,
+          wage,
+        },
+      ],
       trophies: [],
       awards: [],
-      milestones: [{
-        id: uid(), type: "debut", label: `Debut profesional bersama ${club.name}`, season: 1,
-      }],
-      news: [{
-        id: uid(), season: 1, matchday: 0, tag: "transfer",
-        title: `${input.name} resmi bergabung dengan ${club.name}`,
-        body: `Karier profesional dimulai di ${club.name}. Selamat datang di panggung besar!`,
-      }],
-      social: [{
-        id: uid(), season: 1, matchday: 0,
-        content: `Bab pertama karierku dimulai di ${club.name}. Kerja keras, doa keluarga, dan dukungan kalian. Ayo! 💪`,
-        likes: rr(1000, 5000, rng), comments: rr(80, 400, rng), reposts: rr(50, 200, rng),
-      }],
+      milestones: [
+        {
+          id: uid(),
+          type: "debut",
+          label: `Debut profesional bersama ${club.name}`,
+          season: 1,
+        },
+      ],
+      news: [
+        {
+          id: uid(),
+          season: 1,
+          matchday: 0,
+          tag: "transfer",
+          title: `${input.name} resmi bergabung dengan ${club.name}`,
+          body: `Karier profesional dimulai di ${club.name}. Selamat datang di panggung besar!`,
+        },
+      ],
+      social: [
+        {
+          id: uid(),
+          season: 1,
+          matchday: 0,
+          content: `Bab pertama karierku dimulai di ${club.name}. Kerja keras, doa keluarga, dan dukungan kalian. Ayo! 💪`,
+          likes: rr(1000, 5000, rng),
+          comments: rr(80, 400, rng),
+          reposts: rr(50, 200, rng),
+        },
+      ],
       spinLog: [],
       followers: rr(2000, 12000, rng),
       status: "active",
@@ -218,7 +270,7 @@ export const useStore = create<Store>()((set, get) => ({
     const updated = { ...save, player: { ...save.player, name }, updatedAt: Date.now() };
     await persistSave(get, updated);
     set((s) => ({
-      saves: s.saves.map((sv) => sv.id === id ? updated : sv),
+      saves: s.saves.map((sv) => (sv.id === id ? updated : sv)),
     }));
   },
 
@@ -249,9 +301,10 @@ export const useStore = create<Store>()((set, get) => ({
     applyMatchResult(set, get, saveId, rolled);
   },
 
-  clearPending: (saveId) => set((s) => ({
-    saves: s.saves.map((sv) => sv.id === saveId ? { ...sv, pending: undefined } : sv),
-  })),
+  clearPending: (saveId) =>
+    set((s) => ({
+      saves: s.saves.map((sv) => (sv.id === saveId ? { ...sv, pending: undefined } : sv)),
+    })),
 
   previewSeasonEnd: (saveId) => {
     const save = get().saves.find((x) => x.id === saveId);
@@ -278,12 +331,20 @@ export const useStore = create<Store>()((set, get) => ({
           ...sv,
           status: "retired" as const,
           updatedAt: Date.now(),
-          retirement: { season: sv.season.index, reason: "Voluntary", finalOverall: sv.attributes.overall },
-          milestones: [...sv.milestones, {
-            id: uid(), type: "retirement" as const,
-            label: `Pensiun di usia ${sv.player.age} dengan overall ${sv.attributes.overall}`,
+          retirement: {
             season: sv.season.index,
-          }],
+            reason: "Voluntary",
+            finalOverall: sv.attributes.overall,
+          },
+          milestones: [
+            ...sv.milestones,
+            {
+              id: uid(),
+              type: "retirement" as const,
+              label: `Pensiun di usia ${sv.player.age} dengan overall ${sv.attributes.overall}`,
+              season: sv.season.index,
+            },
+          ],
         };
       }),
     }));
@@ -332,17 +393,26 @@ function applyMatchResult(
       const careerGoals = sv.careerStats.goals + rolled.result.goals;
       for (const mark of [10, 25, 50, 100, 200, 300]) {
         if (sv.careerStats.goals < mark && careerGoals >= mark) {
-          milestones.push({ id: uid(), type: "goals", label: `Mencapai ${mark} gol karier`, season: sv.season.index });
+          milestones.push({
+            id: uid(),
+            type: "goals",
+            label: `Mencapai ${mark} gol karier`,
+            season: sv.season.index,
+          });
         }
       }
       const opp = clubById(rolled.result.opponentClubId)!;
       const log: SpinLogEntry = {
-        id: uid(), type: "match", season: sv.season.index, at: Date.now(),
-        summary: rolled.result.selection === "injured"
-          ? `Cedera, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
-          : rolled.result.selection === "suspended"
-          ? `Sanksi kartu, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
-          : `${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst} • ${rolled.result.goals}G ${rolled.result.assists}A rating ${rolled.result.rating}`,
+        id: uid(),
+        type: "match",
+        season: sv.season.index,
+        at: Date.now(),
+        summary:
+          rolled.result.selection === "injured"
+            ? `Cedera, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
+            : rolled.result.selection === "suspended"
+              ? `Sanksi kartu, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
+              : `${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst} • ${rolled.result.goals}G ${rolled.result.assists}A rating ${rolled.result.rating}`,
         opponentName: opp.name,
         matchType: "league",
       };
@@ -364,7 +434,12 @@ function applyMatchResult(
         },
         news: [rolled.news, ...sv.news].slice(0, 200),
         social: rolled.social ? [rolled.social, ...sv.social].slice(0, 200) : sv.social,
-        followers: sv.followers + Math.max(0, rolled.result.goals * 8000 + (rolled.result.motm ? 15000 : 0) + (played ? 500 : 0)),
+        followers:
+          sv.followers +
+          Math.max(
+            0,
+            rolled.result.goals * 8000 + (rolled.result.motm ? 15000 : 0) + (played ? 500 : 0),
+          ),
         spinLog: [log, ...sv.spinLog].slice(0, 300),
         milestones,
         suspendedMatches,
@@ -383,13 +458,24 @@ function advanceSeason(sv: Save, result: SeasonEndResult, chosen: Offer | { kind
   const perf = avgRating / 7 + Math.min(1, cs.goals / 20) * 0.3;
 
   const rng = mulberry32(sv.seed + sv.season.index * 7919);
-  const ovrDelta = ageAdjustment(sv.player.age, sv.attributes.potential, sv.attributes.overall, perf, rng);
+  const ovrDelta = ageAdjustment(
+    sv.player.age,
+    sv.attributes.potential,
+    sv.attributes.overall,
+    perf,
+    rng,
+  );
 
   const attributes = { ...sv.attributes };
   const nudge = (k: keyof typeof attributes) => {
-    attributes[k] = Math.max(20, Math.min(99, attributes[k] + Math.round(ovrDelta * 0.6 + (Math.random() - 0.5) * 2)));
+    attributes[k] = Math.max(
+      20,
+      Math.min(99, attributes[k] + Math.round(ovrDelta * 0.6 + (Math.random() - 0.5) * 2)),
+    );
   };
-  (["pace","shooting","passing","dribbling","defending","physical","goalkeeping"] as const).forEach(nudge);
+  (
+    ["pace", "shooting", "passing", "dribbling", "defending", "physical", "goalkeeping"] as const
+  ).forEach(nudge);
   attributes.overall = Math.max(40, Math.min(99, computeOverall(attributes, sv.player.position)));
 
   const seasonRec = {
@@ -403,52 +489,87 @@ function advanceSeason(sv: Save, result: SeasonEndResult, chosen: Offer | { kind
   const trophies = [...sv.trophies, ...result.trophies];
   const awards = [...sv.awards, ...result.awards];
   const milestones: MilestoneRecord[] = [...sv.milestones];
-  result.trophies.forEach((t) => milestones.push({
-    id: uid(), type: "trophy", season: sv.season.index,
-    label: `Juara ${t.competitionId.toUpperCase()} bersama ${club.short}`,
-  }));
-  result.awards.forEach((a) => milestones.push({
-    id: uid(), type: "award", season: sv.season.index,
-    label: `Menang ${AWARDS[a.awardId as keyof typeof AWARDS].name}`,
-  }));
+  result.trophies.forEach((t) =>
+    milestones.push({
+      id: uid(),
+      type: "trophy",
+      season: sv.season.index,
+      label: `Juara ${t.competitionId.toUpperCase()} bersama ${club.short}`,
+    }),
+  );
+  result.awards.forEach((a) =>
+    milestones.push({
+      id: uid(),
+      type: "award",
+      season: sv.season.index,
+      label: `Menang ${AWARDS[a.awardId as keyof typeof AWARDS].name}`,
+    }),
+  );
 
   const news: NewsItem[] = [...sv.news];
-  result.trophies.forEach((t) => news.unshift({
-    id: uid(), season: sv.season.index, matchday: sv.season.totalMatches,
-    tag: "trophy", title: `${club.name} juara ${t.competitionId.toUpperCase()} musim ${sv.season.index}!`,
-    body: `${sv.player.name} angkat trofi bersama ${club.name}.`,
-  }));
-  result.awards.forEach((a) => news.unshift({
-    id: uid(), season: sv.season.index, matchday: sv.season.totalMatches,
-    tag: "award", title: `${sv.player.name} menangkan ${AWARDS[a.awardId as keyof typeof AWARDS].name}`,
-    body: a.detail ?? "Penghargaan bergengsi untuk performa musim ini.",
-  }));
+  result.trophies.forEach((t) =>
+    news.unshift({
+      id: uid(),
+      season: sv.season.index,
+      matchday: sv.season.totalMatches,
+      tag: "trophy",
+      title: `${club.name} juara ${t.competitionId.toUpperCase()} musim ${sv.season.index}!`,
+      body: `${sv.player.name} angkat trofi bersama ${club.name}.`,
+    }),
+  );
+  result.awards.forEach((a) =>
+    news.unshift({
+      id: uid(),
+      season: sv.season.index,
+      matchday: sv.season.totalMatches,
+      tag: "award",
+      title: `${sv.player.name} menangkan ${AWARDS[a.awardId as keyof typeof AWARDS].name}`,
+      body: a.detail ?? "Penghargaan bergengsi untuk performa musim ini.",
+    }),
+  );
 
   let currentClub = sv.currentClub;
   const transfers: TransferRecord[] = [...sv.transfers];
   const nextSeasonIndex = sv.season.index + 1;
   if ("kind" in chosen && chosen.kind === "stay") {
-    currentClub = { ...currentClub, contractUntilSeason: Math.max(1, currentClub.contractUntilSeason - 1) };
+    currentClub = {
+      ...currentClub,
+      contractUntilSeason: Math.max(1, currentClub.contractUntilSeason - 1),
+    };
   } else if (!("kind" in chosen)) {
     if (chosen.type === "renewal") {
       currentClub = { ...currentClub, wage: chosen.wage, contractUntilSeason: chosen.years };
       transfers.unshift({
-        id: uid(), fromClubId: club.id, toClubId: club.id,
-        season: nextSeasonIndex, type: "renewal", fee: 0, wage: chosen.wage,
+        id: uid(),
+        fromClubId: club.id,
+        toClubId: club.id,
+        season: nextSeasonIndex,
+        type: "renewal",
+        fee: 0,
+        wage: chosen.wage,
       });
     } else {
       const toClub = clubById(chosen.clubId)!;
       transfers.unshift({
-        id: uid(), fromClubId: club.id, toClubId: toClub.id,
-        season: nextSeasonIndex, type: chosen.type === "free" ? "free" : "signed",
-        fee: chosen.fee, wage: chosen.wage,
+        id: uid(),
+        fromClubId: club.id,
+        toClubId: toClub.id,
+        season: nextSeasonIndex,
+        type: chosen.type === "free" ? "free" : "signed",
+        fee: chosen.fee,
+        wage: chosen.wage,
       });
       milestones.push({
-        id: uid(), type: "transfer", season: nextSeasonIndex,
+        id: uid(),
+        type: "transfer",
+        season: nextSeasonIndex,
         label: `Transfer ke ${toClub.name} (€${chosen.fee}jt)`,
       });
       news.unshift({
-        id: uid(), season: nextSeasonIndex, matchday: 0, tag: "transfer",
+        id: uid(),
+        season: nextSeasonIndex,
+        matchday: 0,
+        tag: "transfer",
         title: `RESMI: ${sv.player.name} bergabung ${toClub.name}`,
         body: `Nilai transfer €${chosen.fee}jt, kontrak ${chosen.years} tahun.`,
       });
@@ -472,7 +593,12 @@ function advanceSeason(sv: Save, result: SeasonEndResult, chosen: Offer | { kind
     player: { ...sv.player, age: nextAge },
     attributes,
     currentClub,
-    season: { index: nextSeasonIndex, matchday: 0, totalMatches: 38, currentStats: emptySeasonStats() },
+    season: {
+      index: nextSeasonIndex,
+      matchday: 0,
+      totalMatches: 38,
+      currentStats: emptySeasonStats(),
+    },
     careerStats: {
       ...sv.careerStats,
       trophies: sv.careerStats.trophies + result.trophies.length,
@@ -485,12 +611,20 @@ function advanceSeason(sv: Save, result: SeasonEndResult, chosen: Offer | { kind
     milestones,
     news,
     followers: sv.followers + followersDelta,
-    spinLog: [{
-      id: uid(), type: "season" as const, season: sv.season.index, at: Date.now(),
-      summary: `Musim ${sv.season.index}: liga #${result.leaguePosition} • ${result.trophies.length} trofi • ${result.awards.length} award`,
-    }, ...sv.spinLog].slice(0, 300),
+    spinLog: [
+      {
+        id: uid(),
+        type: "season" as const,
+        season: sv.season.index,
+        at: Date.now(),
+        summary: `Musim ${sv.season.index}: liga #${result.leaguePosition} • ${result.trophies.length} trofi • ${result.awards.length} award`,
+      },
+      ...sv.spinLog,
+    ].slice(0, 300),
     status: retiring ? "retired" : "active",
-    retirement: retiring ? { season: sv.season.index, reason: "End of career", finalOverall: attributes.overall } : undefined,
+    retirement: retiring
+      ? { season: sv.season.index, reason: "End of career", finalOverall: attributes.overall }
+      : undefined,
     pending: undefined,
   };
 }

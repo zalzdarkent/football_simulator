@@ -107,7 +107,7 @@ export function PlayerCard({ save, size = "md" }: Props) {
           <div
             className={`${size === "xs" ? "text-xs" : "text-lg"} font-display font-bold text-white/90 tracking-tight`}
           >
-            {save.currentClub.shirtNumber}
+            {save.player.age}
           </div>
         </div>
       </div>
