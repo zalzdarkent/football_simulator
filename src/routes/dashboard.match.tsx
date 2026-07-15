@@ -20,18 +20,21 @@ function MatchSpin() {
   const confirmMatch = useStore((s) => s.confirmMatch);
 
   const [spinning, setSpinning] = useState(false);
-  const [preview, setPreview] = useState<ReturnType<typeof previewMatch>>(null);
+  const [preview, setPreview] = useState<any>(null);
   const [reveal, setReveal] = useState(0); // 0..4
   const [clubs, setClubs] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    api.getClubs().then((data) => {
-      const clubMap: Record<string, any> = {};
-      data.forEach((club: any) => {
-        clubMap[club.id] = club;
-      });
-      setClubs(clubMap);
-    }).catch(console.error);
+    api
+      .getClubs()
+      .then((data) => {
+        const clubMap: Record<string, any> = {};
+        data.forEach((club: any) => {
+          clubMap[club.id] = club;
+        });
+        setClubs(clubMap);
+      })
+      .catch(console.error);
   }, []);
 
   if (!save) return null;
@@ -45,48 +48,70 @@ function MatchSpin() {
     );
   }
 
-  const spin = () => {
+  const spin = async () => {
     setSpinning(true);
     setReveal(0);
     setPreview(null);
-    setTimeout(() => {
-      const p = previewMatch(save.id);
-      setPreview(p);
-      setSpinning(false);
-      // reveal stages
+    setTimeout(async () => {
+      try {
+        const p = await previewMatch(save.id);
+        setPreview(p);
+      } catch (e) {
+        console.error("Spin error:", e);
+        alert("Gagal memuat pertandingan: " + (e as Error).message);
+      } finally {
+        setSpinning(false);
+      }
       [1, 2, 3, 4].forEach((n, i) => setTimeout(() => setReveal(n), 400 + i * 500));
     }, 900);
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!preview) return;
-    confirmMatch(save.id, preview);
-    setPreview(null);
-    setReveal(0);
-    navigate({ to: "/dashboard" });
+    try {
+      await confirmMatch(save.id, preview);
+      setPreview(null);
+      setReveal(0);
+      navigate({ to: "/dashboard" });
+    } catch (e) {
+      console.error("Confirm error:", e);
+      alert("Gagal konfirmasi hasil: " + (e as Error).message);
+    }
   };
 
-  const club = clubById(save.currentClub.clubId)!;
-  const opp = preview ? clubById(preview.result.opponentClubId) : null;
-  
-  const matchHistory = save.spinLog.filter(entry => entry.type === "match" && entry.season === save.season.index);
+  const club = clubs[save.currentClub.clubId];
+  const opp = preview?.opponent;
+  const comp = preview?.competition;
+  const result = preview?.result;
+
+  const matchHistory = save.spinLog.filter(
+    (entry) => entry.type === "match" && entry.season === save.season.index,
+  );
 
   return (
     <main className="max-w-4xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="text-xs uppercase tracking-widest text-muted-foreground">Musim {save.season.index} • Pekan {save.season.matchday + 1}/{save.season.totalMatches}</div>
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">
+            Musim {save.season.index} • Pekan {save.season.matchday + 1}/{save.season.totalMatches}
+          </div>
           <h1 className="text-3xl font-display font-extrabold">Pertandingan Berikutnya</h1>
         </div>
-        <Button variant="ghost" onClick={() => navigate({ to: "/dashboard" })}>Batal</Button>
+        <Button variant="ghost" onClick={() => navigate({ to: "/dashboard" })}>
+          Batal
+        </Button>
       </div>
 
       {!preview && !spinning && (
         <Card className="bg-card-gradient border-border/60">
           <CardContent className="p-10 text-center">
             <div className="text-6xl mb-4">🎲</div>
-            <p className="text-muted-foreground mb-6">Klik spin untuk memulai. Kamu bisa re-roll sepuasnya sebelum mengonfirmasi.</p>
-            <Button size="lg" onClick={spin}>Spin</Button>
+            <p className="text-muted-foreground mb-6">
+              Klik spin untuk memulai. Kamu bisa re-roll sepuasnya sebelum mengonfirmasi.
+            </p>
+            <Button size="lg" onClick={spin}>
+              Spin
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -112,7 +137,7 @@ function MatchSpin() {
                 <ClubBadge id={club.id} clubData={clubs[club.id] || club} />
                 <div>
                   <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                    {preview.result.home ? "Kandang" : "Tandang"}
+                    {preview.match.home ? "Kandang" : "Tandang"}
                   </div>
                   <AnimatePresence>
                     {reveal >= 2 && (
@@ -121,20 +146,28 @@ function MatchSpin() {
                         animate={{ scale: 1, opacity: 1 }}
                         className="text-5xl font-display font-extrabold my-2"
                       >
-                        {preview.result.goalsFor} - {preview.result.goalsAgainst}
+                        {result.team_goals} - {result.opp_goals}
                       </motion.div>
                     )}
                   </AnimatePresence>
                   <AnimatePresence>
                     {reveal >= 2 && (
                       <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
                         className={`text-sm font-semibold ${
-                          preview.result.teamResult === "W" ? "text-primary"
-                          : preview.result.teamResult === "L" ? "text-destructive" : "text-muted-foreground"
+                          result.teamResult === "W"
+                            ? "text-primary"
+                            : result.teamResult === "L"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
                         }`}
                       >
-                        {preview.result.teamResult === "W" ? "MENANG" : preview.result.teamResult === "L" ? "KALAH" : "SERI"}
+                        {result.teamResult === "W"
+                          ? "MENANG"
+                          : result.teamResult === "L"
+                            ? "KALAH"
+                            : "SERI"}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -145,45 +178,59 @@ function MatchSpin() {
               <AnimatePresence>
                 {reveal >= 1 && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
                     className="mt-6 text-center"
                   >
-                    <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
-                      preview.result.selection === "starter" ? "bg-primary text-primary-foreground"
-                      : preview.result.selection === "sub" ? "bg-secondary text-secondary-foreground"
-                      : "bg-muted text-muted-foreground"
-                    }`}>
-                      {preview.result.selection === "starter" ? "STARTER"
-                        : preview.result.selection === "sub" ? "MASUK DARI BANGKU"
-                        : preview.result.selection === "injured" ? "CEDERA"
-                        : "TIDAK DIMAINKAN"}
+                    <span
+                      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                        result.selection === "starter"
+                          ? "bg-primary text-primary-foreground"
+                          : result.selection === "sub"
+                            ? "bg-secondary text-secondary-foreground"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {result.selection === "starter"
+                        ? "STARTER"
+                        : result.selection === "sub"
+                          ? "MASUK DARI BANGKU"
+                          : result.selection === "injured"
+                            ? "CEDERA"
+                            : "TIDAK DIMAINKAN"}
                     </span>
                   </motion.div>
                 )}
               </AnimatePresence>
 
               <AnimatePresence>
-                {reveal >= 3 && preview.result.selection !== "benched" && preview.result.selection !== "injured" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3"
-                  >
-                    <MiniStat k="Menit" v={preview.result.minutes} />
-                    <MiniStat k="Gol" v={preview.result.goals} highlight={preview.result.goals > 0} />
-                    <MiniStat k="Assist" v={preview.result.assists} />
-                    <MiniStat k="Rating" v={preview.result.rating.toFixed(1)} />
-                    <MiniStat k="Kartu" v={preview.result.red ? "🟥" : preview.result.yellow ? "🟨" : "—"} />
-                  </motion.div>
-                )}
+                {reveal >= 3 &&
+                  result.selection !== "benched" &&
+                  result.selection !== "injured" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3"
+                    >
+                      <MiniStat k="Menit" v={result.minutes} />
+                      <MiniStat k="Gol" v={result.goals} highlight={result.goals > 0} />
+                      <MiniStat k="Assist" v={result.assists} />
+                      <MiniStat k="Rating" v={result.rating.toFixed(1)} />
+                      <MiniStat k="Kartu" v={result.red ? "🟥" : result.yellow ? "🟨" : "—"} />
+                    </motion.div>
+                  )}
               </AnimatePresence>
 
               <AnimatePresence>
                 {reveal >= 4 && (
                   <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className="mt-6 rounded-lg border border-border/60 bg-panel p-4"
                   >
-                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Headline</div>
+                    <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+                      Headline
+                    </div>
                     <div className="font-medium">{preview.news.title}</div>
                     {preview.social && (
                       <div className="mt-3 rounded-lg bg-panel-2 p-3 text-sm">
@@ -191,8 +238,16 @@ function MatchSpin() {
                         {preview.social.content}
                       </div>
                     )}
-                    {preview.result.motm && <div className="mt-2 text-sm text-[color:var(--gold)]">🏅 Man of the Match!</div>}
-                    {preview.result.injuryMatches > 0 && <div className="mt-2 text-sm text-destructive">Cedera: absen {preview.result.injuryMatches} pertandingan</div>}
+                    {result.motm && (
+                      <div className="mt-2 text-sm text-[color:var(--gold)]">
+                        🏅 Man of the Match!
+                      </div>
+                    )}
+                    {result.injuryMatches > 0 && (
+                      <div className="mt-2 text-sm text-destructive">
+                        Cedera: absen {result.injuryMatches} pertandingan
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -200,8 +255,12 @@ function MatchSpin() {
           </Card>
 
           <div className="flex justify-center gap-3">
-            <Button variant="secondary" onClick={spin}>🎲 Re-roll</Button>
-            <Button onClick={confirm} disabled={reveal < 4}>Konfirmasi Hasil</Button>
+            <Button variant="secondary" onClick={spin}>
+              🎲 Re-roll
+            </Button>
+            <Button onClick={confirm} disabled={reveal < 4}>
+              Konfirmasi Hasil
+            </Button>
           </div>
           <p className="text-center text-xs text-muted-foreground">
             Re-roll gratis sepuasnya. Hasil hanya final setelah kamu klik Konfirmasi.
@@ -212,7 +271,9 @@ function MatchSpin() {
       {matchHistory.length > 0 && (
         <Card className="bg-card-gradient border-border/60 mt-6">
           <CardContent className="p-4">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Riwayat Pertandingan</div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
+              Riwayat Pertandingan
+            </div>
             <div className="max-h-64 overflow-y-auto pr-2">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-card">
@@ -230,32 +291,44 @@ function MatchSpin() {
                     const resultMatch = summary.match(/(?:•\s*)?(W|D|L)\s+(\d+)-(\d+)/);
                     let result = resultMatch ? resultMatch[1] : null;
                     const score = resultMatch ? `${resultMatch[2]}-${resultMatch[3]}` : summary;
-                    
+
                     // Fix: if score shows draw but result is L/D, correct the result
                     if (resultMatch && resultMatch[2] === resultMatch[3]) {
-                      result = 'D';
+                      result = "D";
                     } else if (resultMatch && parseInt(resultMatch[2]) > parseInt(resultMatch[3])) {
-                      result = 'W';
+                      result = "W";
                     } else if (resultMatch && parseInt(resultMatch[2]) < parseInt(resultMatch[3])) {
-                      result = 'L';
+                      result = "L";
                     }
-                    
+
                     return (
-                      <tr key={entry.id} className="border-b border-border/20 last:border-0 hover:bg-accent/50">
+                      <tr
+                        key={entry.id}
+                        className="border-b border-border/20 last:border-0 hover:bg-accent/50"
+                      >
                         <td className="py-2 px-2 text-muted-foreground">M{entry.season}</td>
                         <td className="py-2 px-2">
-                          <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
-                            result === 'W' ? 'bg-primary/20 text-primary' :
-                            result === 'L' ? 'bg-destructive/20 text-destructive' :
-                            result === 'D' ? 'bg-secondary/50 text-secondary-foreground' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {result || '—'}
+                          <span
+                            className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                              result === "W"
+                                ? "bg-primary/20 text-primary"
+                                : result === "L"
+                                  ? "bg-destructive/20 text-destructive"
+                                  : result === "D"
+                                    ? "bg-secondary/50 text-secondary-foreground"
+                                    : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {result || "—"}
                           </span>
                         </td>
                         <td className="py-2 px-2 font-medium">{score}</td>
-                        <td className="py-2 px-2 text-muted-foreground">{entry.opponentName || '—'}</td>
-                        <td className="py-2 px-2 text-muted-foreground capitalize">{entry.matchType || '—'}</td>
+                        <td className="py-2 px-2 text-muted-foreground">
+                          {entry.opponentName || "—"}
+                        </td>
+                        <td className="py-2 px-2 text-muted-foreground capitalize">
+                          {entry.matchType || "—"}
+                        </td>
                       </tr>
                     );
                   })}
@@ -279,14 +352,17 @@ function ClubBadge({ id, clubData }: { id: string; clubData?: any }) {
           alt={c.name}
           className="w-16 h-16 object-contain"
           onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+            (e.target as HTMLImageElement).style.display = "none";
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
           }}
         />
       ) : null}
       <div
-        className={`w-16 h-16 rounded-xl flex items-center justify-center font-display font-bold text-lg ${c.logoUrl ? 'hidden' : ''}`}
-        style={{ backgroundColor: c.colors?.[0] || c.colorPrimary, color: c.colors?.[1] || c.colorSecondary }}
+        className={`w-16 h-16 rounded-xl flex items-center justify-center font-display font-bold text-lg ${c.logoUrl ? "hidden" : ""}`}
+        style={{
+          backgroundColor: c.colors?.[0] || c.colorPrimary,
+          color: c.colors?.[1] || c.colorSecondary,
+        }}
       >
         {c.short}
       </div>
@@ -297,7 +373,9 @@ function ClubBadge({ id, clubData }: { id: string; clubData?: any }) {
 
 function MiniStat({ k, v, highlight }: { k: string; v: number | string; highlight?: boolean }) {
   return (
-    <div className={`rounded-lg p-3 text-center ${highlight ? "bg-primary text-primary-foreground" : "bg-panel-2"}`}>
+    <div
+      className={`rounded-lg p-3 text-center ${highlight ? "bg-primary text-primary-foreground" : "bg-panel-2"}`}
+    >
       <div className="font-display font-extrabold text-2xl">{v}</div>
       <div className="text-[10px] uppercase tracking-widest opacity-80">{k}</div>
     </div>

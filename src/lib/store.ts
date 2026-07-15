@@ -17,7 +17,21 @@ import { mulberry32, randSeed, uid, range as rr } from "./sim/rng";
 import { genInitialAttributes, ageAdjustment, computeOverall } from "./sim/attributes";
 import { rollMatch } from "./sim/match";
 import { rollSeasonEnd, shouldRetire } from "./sim/season";
-export let CLUBS: any[] = [];
+import { api, ensureSession } from "../lib/api";
+
+export type Club = {
+  id: string;
+  name: string;
+  short: string;
+  league: string;
+  colors: [string, string];
+  logoUrl: string;
+  tier: number;
+  reputation: number;
+  city?: string;
+};
+
+export let CLUBS: Club[] = [];
 export let LEAGUES: any[] = [];
 export let COUNTRIES: any[] = [];
 export let AWARDS: any = {};
@@ -39,7 +53,6 @@ export function clubsByTier(tier: number) {
 export function countryByCode(code: string) {
   return COUNTRIES.find((c) => c.code === code || c.code === code.substring(0, 2));
 }
-import { api, ensureSession } from "./api";
 
 type Store = {
   saves: Save[];
@@ -63,18 +76,29 @@ type Store = {
   setActive: (id: string | null) => Promise<void>;
   importSave: (data: Save) => Promise<void>;
 
-  previewMatch: (
-    saveId: string,
-  ) => {
-    result: MatchSpinResult;
+  previewMatch: (saveId: string) => Promise<{
+    match: any;
+    opponent: any;
+    competition: any;
+    result: any;
+    previewSeed: number;
     news: NewsItem;
     social?: SocialPost;
-    opponentName: string;
-  } | null;
+  } | null>;
+
   confirmMatch: (
     saveId: string,
-    rolled: { result: MatchSpinResult; news: NewsItem; social?: SocialPost },
-  ) => void;
+    rolled: {
+      match: any;
+      opponent: any;
+      competition: any;
+      result: any;
+      previewSeed: number;
+      news: NewsItem;
+      social?: SocialPost;
+    },
+  ) => Promise<void>;
+
   clearPending: (saveId: string) => void;
 
   previewSeasonEnd: (saveId: string) => SeasonEndResult | null;
@@ -243,6 +267,7 @@ export const useStore = create<Store>()((set, get) => ({
     const sessionId = await getSessionId(get);
     await api.createSave(sessionId, save);
     await api.setActiveSave(sessionId, save.id);
+    await api.startSeason(save.id);
     set((s) => ({
       saves: [...s.saves, save],
       activeSaveId: save.id,
@@ -287,18 +312,42 @@ export const useStore = create<Store>()((set, get) => ({
     set((s) => ({ saves: [...s.saves, save] }));
   },
 
-  previewMatch: (saveId) => {
+  previewMatch: async (saveId) => {
     const save = get().saves.find((x) => x.id === saveId);
     if (!save || save.status !== "active") return null;
     if (save.season.matchday >= save.season.totalMatches) return null;
-    const rng = mulberry32(randSeed());
-    const rolled = rollMatch(save, rng);
-    const opp = clubById(rolled.result.opponentClubId)!;
-    return { ...rolled, opponentName: opp.name };
+    const data = await api.previewNextMatch(saveId);
+    // Transform API response to match expected format
+    return {
+      result: {
+        ...data.result,
+        opponentClubId: data.match.opponent_club_id,
+        goalsFor: data.result.team_goals,
+        goalsAgainst: data.result.opp_goals,
+      },
+      match: data.match,
+      opponent: data.opponent,
+      competition: data.competition,
+      previewSeed: data.previewSeed,
+      news: data.news,
+      social: data.social,
+      opponentName: data.opponent.name,
+    } as any;
   },
 
-  confirmMatch: (saveId, rolled) => {
-    applyMatchResult(set, get, saveId, rolled);
+  confirmMatch: async (saveId, rolled) => {
+    await api.commitMatch(saveId, rolled.match.id, rolled.previewSeed);
+    // Transform for applyMatchResult
+    const transformed = {
+      ...rolled,
+      result: {
+        ...rolled.result,
+        opponentClubId: rolled.match.opponent_club_id,
+        goalsFor: rolled.result.team_goals,
+        goalsAgainst: rolled.result.opp_goals,
+      },
+    };
+    applyMatchResult(set, get, saveId, transformed);
   },
 
   clearPending: (saveId) =>
@@ -312,7 +361,7 @@ export const useStore = create<Store>()((set, get) => ({
     return rollSeasonEnd(save, mulberry32(randSeed()));
   },
 
-  confirmSeasonAndOffer: (saveId, chosen, result) => {
+  confirmSeasonAndOffer: async (saveId, chosen, result) => {
     set((s) => ({
       saves: s.saves.map((sv) => {
         if (sv.id !== saveId) return sv;
@@ -320,7 +369,18 @@ export const useStore = create<Store>()((set, get) => ({
       }),
     }));
     const updated = get().saves.find((x) => x.id === saveId);
-    if (updated) syncSave(get, updated);
+    if (updated) {
+      await persistSave(get, updated);
+      const seasonResult = await api.startSeason(saveId);
+      if (seasonResult?.matches) {
+        set((s) => ({
+          saves: s.saves.map((sv) => {
+            if (sv.id !== saveId) return sv;
+            return { ...sv, season: { ...sv.season, totalMatches: seasonResult.matches } };
+          }),
+        }));
+      }
+    }
   },
 
   retire: (saveId) => {
@@ -357,7 +417,11 @@ function applyMatchResult(
   set: (fn: (s: Store) => Partial<Store> | Store) => void,
   get: () => Store,
   saveId: string,
-  rolled: { result: MatchSpinResult; news: NewsItem; social?: SocialPost },
+  rolled: { result: MatchSpinResult; news: NewsItem; social?: SocialPost } & {
+    match?: any;
+    team_goals?: number;
+    opp_goals?: number;
+  },
 ) {
   set((s) => ({
     saves: s.saves.map((sv) => {
@@ -386,8 +450,9 @@ function applyMatchResult(
         teamWins: (cs.teamWins || 0) + (rolled.result.teamResult === "W" ? 1 : 0),
         teamDraws: (cs.teamDraws || 0) + (rolled.result.teamResult === "D" ? 1 : 0),
         teamLosses: (cs.teamLosses || 0) + (rolled.result.teamResult === "L" ? 1 : 0),
-        teamGoalsFor: (cs.teamGoalsFor || 0) + rolled.result.goalsFor,
-        teamGoalsAgainst: (cs.teamGoalsAgainst || 0) + rolled.result.goalsAgainst,
+        teamGoalsFor: (cs.teamGoalsFor || 0) + (rolled.result.team_goals ?? rolled.result.goalsFor),
+        teamGoalsAgainst:
+          (cs.teamGoalsAgainst || 0) + (rolled.result.opp_goals ?? rolled.result.goalsAgainst),
       };
       const milestones: MilestoneRecord[] = [...sv.milestones];
       const careerGoals = sv.careerStats.goals + rolled.result.goals;
@@ -401,7 +466,7 @@ function applyMatchResult(
           });
         }
       }
-      const opp = clubById(rolled.result.opponentClubId)!;
+      const opp = clubById(rolled.match.opponent_club_id)!;
       const log: SpinLogEntry = {
         id: uid(),
         type: "match",
@@ -409,10 +474,10 @@ function applyMatchResult(
         at: Date.now(),
         summary:
           rolled.result.selection === "injured"
-            ? `Cedera, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
+            ? `Cedera, absen • ${rolled.result.teamResult} ${rolled.result.team_goals ?? rolled.result.goalsFor}-${rolled.result.opp_goals ?? rolled.result.goalsAgainst}`
             : rolled.result.selection === "suspended"
-              ? `Sanksi kartu, absen • ${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst}`
-              : `${rolled.result.teamResult} ${rolled.result.goalsFor}-${rolled.result.goalsAgainst} • ${rolled.result.goals}G ${rolled.result.assists}A rating ${rolled.result.rating}`,
+              ? `Sanksi kartu, absen • ${rolled.result.teamResult} ${rolled.result.team_goals ?? rolled.result.goalsFor}-${rolled.result.opp_goals ?? rolled.result.goalsAgainst}`
+              : `${rolled.result.teamResult} ${rolled.result.team_goals ?? rolled.result.goalsFor}-${rolled.result.opp_goals ?? rolled.result.goalsAgainst} • ${rolled.result.goals}G ${rolled.result.assists}A rating ${rolled.result.rating}`,
         opponentName: opp.name,
         matchType: "league",
       };

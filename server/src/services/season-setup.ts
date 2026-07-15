@@ -54,8 +54,11 @@ type PlannedMatch = {
 async function planLeague(club: ClubRow, comp: CompRow, seed: number, seasonIdx: number, orderStart: number): Promise<PlannedMatch[]> {
   const rng = rngFor(seed, "league", comp.id, seasonIdx);
   const others = (await clubsByLeague(club.league_id)).filter(c => c.id !== club.id);
-  // Ensure at least 18 opponents for round-robin; if league is small, repeat home/away
-  const doubleRound = shuffle(others, rng).concat(shuffle(others, rngFor(seed, "leagueR2", comp.id, seasonIdx)));
+  // Simple double round-robin: shuffle opponents twice, concatenate
+  const round1 = shuffle(others, rng);
+  const round2 = shuffle(others, rngFor(seed, "leagueR2", comp.id, seasonIdx));
+  const doubleRound = round1.concat(round2);
+  
   const out: PlannedMatch[] = [];
   let order = orderStart;
   doubleRound.forEach((opp, i) => {
@@ -135,7 +138,7 @@ export async function setupSeason(save: SaveRow, club: ClubRow): Promise<{ match
   const nonLeague: PlannedMatch[] = [];
   for (const c of qualified) {
     if (c.format === "knockout") nonLeague.push(...(await planKnockout(club, c, save.seed, save.season_index, 0, 5)));
-    else if (c.format === "group_knockout" || (c.format === "knockout" && c.scope === "continental")) {
+    if (c.format === "group_knockout" || (c.format === "knockout" && c.scope === "continental")) {
       // handled below for continental too
     }
     if (c.scope === "continental") nonLeague.push(...(await planContinental(club, c, save.seed, save.season_index, 0)));
@@ -157,5 +160,24 @@ export async function setupSeason(save: SaveRow, club: ClubRow): Promise<{ match
       [save.id, save.season_index, m.competition_id, m.matchday, m.stage, m.order_key, m.opponent_club_id, m.home],
     );
   }
+
+  // Calculate total matches for this season (league + cups + continental)
+  const leagueComp = qualified.find(c => c.format === "league");
+  let totalLeagueMatches = 0;
+  if (leagueComp) {
+    const leagueMatches = merged.filter(m => m.competition_id === leagueComp.id);
+    // Count unique matchdays for league
+    const leagueMatchdays = new Set(leagueMatches.map(m => m.matchday));
+    totalLeagueMatches = leagueMatchdays.size;
+  }
+  const cupMatches = merged.filter(m => m.competition_id !== leagueComp?.id);
+  const totalMatches = totalLeagueMatches + cupMatches.length;
+
+  // Update save with correct totalMatches
+  await query(
+    `UPDATE saves SET data = jsonb_set(data, '{season,totalMatches}', to_jsonb($1::int)) WHERE id = $2`,
+    [totalMatches, save.id]
+  );
+
   return { matches: merged.length, competitions: qualified.map(c => c.id) };
 }

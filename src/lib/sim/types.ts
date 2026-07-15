@@ -124,6 +124,9 @@ export type MatchSpinResult = {
   teamResult: "W" | "D" | "L";
   goalsFor: number;
   goalsAgainst: number;
+  // Server response field names (aliases)
+  team_goals?: number;
+  opp_goals?: number;
   motm: boolean;
   injuryMatches: number;
 };

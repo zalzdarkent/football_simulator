@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useActiveSave, useStore } from "../lib/store";
+import { useStore, useActiveSave } from "../lib/store";
 import { useRequireSave } from "../hooks/use-require-save";
 import { clubById } from "../lib/store";
 import { PlayerCard } from "../components/PlayerCard";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
+import { api } from "../lib/api";
 
 export const Route = createFileRoute("/dashboard/")({
   head: () => ({ meta: [{ title: "Dasbor — Become a Legend" }] }),
@@ -19,12 +20,16 @@ function Dashboard() {
   if (!save) return null;
 
   const club = clubById(save.currentClub.clubId);
-  if (!club) return (
-    <main className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center gap-4">
-      <p className="text-muted-foreground">Karier ini menggunakan data klub yang sudah tidak ada (sistem lama). Silakan buat karier baru.</p>
-      <Button onClick={() => navigate({ to: "/" })}>Kembali ke Beranda</Button>
-    </main>
-  );
+  if (!club)
+    return (
+      <main className="max-w-7xl mx-auto px-4 py-8 flex flex-col items-center gap-4">
+        <p className="text-muted-foreground">
+          Karier ini menggunakan data klub yang sudah tidak ada (sistem lama). Silakan buat karier
+          baru.
+        </p>
+        <Button onClick={() => navigate({ to: "/" })}>Kembali ke Beranda</Button>
+      </main>
+    );
   const cs = save.season.currentStats;
   const avgRating = cs.ratingCount ? (cs.ratingSum / cs.ratingCount).toFixed(2) : "—";
   const seasonProgress = (save.season.matchday / save.season.totalMatches) * 100;
@@ -51,25 +56,68 @@ function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Musim {save.season.index}</div>
-                  <h1 className="text-3xl font-display font-extrabold mt-1">Selamat datang kembali, {save.player.name.split(" ")[0]}!</h1>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Musim {save.season.index}
+                  </div>
+                  <h1 className="text-3xl font-display font-extrabold mt-1">
+                    Selamat datang kembali, {save.player.name.split(" ")[0]}!
+                  </h1>
                 </div>
                 {save.status === "retired" ? (
                   <span className="text-xs uppercase bg-muted rounded px-2 py-1">Pensiun</span>
-                ) : (
-                  <Button size="lg" onClick={() => navigate({ to: seasonDone ? "/dashboard/season-end" : "/dashboard/match" })}>
-                    {seasonDone ? "Akhiri Musim" : "Main Pertandingan Berikutnya"}
+                ) : seasonDone ? (
+                  <Button size="lg" onClick={() => navigate({ to: "/dashboard/season-end" })}>
+                    Akhiri Musim
                   </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button size="lg" onClick={() => navigate({ to: "/dashboard/match" })}>
+                      Main Pertandingan Berikutnya
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      onClick={async () => {
+                        if (
+                          !confirm(
+                            "Simulasi sisa musim? Akan memainkan semua pertandingan tersisa otomatis.",
+                          )
+                        )
+                          return;
+                        try {
+                          const res = await api.simulateSeason(save.id);
+                          if (res?.simulated) {
+                            await useStore.getState().hydrate();
+                            navigate({ to: "/dashboard/season-end" });
+                          }
+                        } catch (e) {
+                          alert("Gagal simulasi: " + (e as Error).message);
+                        }
+                      }}
+                    >
+                      ⏩ Simulasi Sisa Musim
+                    </Button>
+                  </div>
                 )}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4 mt-6">
                 <div>
-                  <div className="flex justify-between text-xs mb-1"><span>Progress Musim</span><span>{save.season.matchday}/{save.season.totalMatches}</span></div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>Progress Musim</span>
+                    <span>
+                      {save.season.matchday}/{save.season.totalMatches}
+                    </span>
+                  </div>
                   <Progress value={seasonProgress} />
                 </div>
                 <div>
-                  <div className="flex justify-between text-xs mb-1"><span>Overall → Potensi</span><span>{save.attributes.overall}/{save.attributes.potential}</span></div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span>Overall → Potensi</span>
+                    <span>
+                      {save.attributes.overall}/{save.attributes.potential}
+                    </span>
+                  </div>
                   <Progress value={Math.max(0, Math.min(100, ovrProgress))} />
                 </div>
               </div>
@@ -102,9 +150,13 @@ function Dashboard() {
 
           {save.status === "active" && (
             <div className="pt-4">
-              <Button variant="ghost" className="text-danger" onClick={() => {
-                if (confirm("Yakin ingin pensiun? Karier akan berakhir.")) retire(save.id);
-              }}>
+              <Button
+                variant="ghost"
+                className="text-danger"
+                onClick={() => {
+                  if (confirm("Yakin ingin pensiun? Karier akan berakhir.")) retire(save.id);
+                }}
+              >
                 Pensiun sekarang
               </Button>
             </div>
@@ -116,7 +168,12 @@ function Dashboard() {
 }
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-medium">{v}</span></div>;
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-medium">{v}</span>
+    </div>
+  );
 }
 function Stat({ k, v }: { k: string; v: number | string }) {
   return (

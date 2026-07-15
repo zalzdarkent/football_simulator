@@ -44,13 +44,32 @@ export const api = {
       body: JSON.stringify(save),
     }),
 
-  deleteSave: (id: string) =>
-    request<void>(`/saves/${id}`, { method: "DELETE" }),
+  deleteSave: (id: string) => request<void>(`/saves/${id}`, { method: "DELETE" }),
 
   getClubs: (league?: string, tier?: number) =>
     request<any[]>("/clubs" + (league ? `?league=${league}` : "") + (tier ? `&tier=${tier}` : "")),
 
   getClub: (id: string) => request<any>(`/clubs/${id}`),
+
+  // Match API
+  previewNextMatch: (saveId: string, previewSeed?: number) =>
+    request<any>(
+      `/saves/${saveId}/matches/next/preview` + (previewSeed ? `?previewSeed=${previewSeed}` : ""),
+    ),
+
+  commitMatch: (saveId: string, matchId: string, previewSeed: number) =>
+    request<any>(`/saves/${saveId}/matches/${matchId}/commit`, {
+      method: "POST",
+      body: JSON.stringify({ previewSeed }),
+    }),
+
+  // Season API
+  startSeason: (saveId: string) =>
+    request<any>(`/saves/${saveId}/season/start`, { method: "POST" }),
+
+  // Season simulation
+  simulateSeason: (saveId: string) =>
+    request<any>(`/saves/${saveId}/season/simulate`, { method: "POST" }),
 };
 
 const SESSION_KEY = "fcs-session-id";
