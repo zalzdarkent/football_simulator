@@ -358,7 +358,12 @@ export const useStore = create<Store>()((set, get) => ({
   previewSeasonEnd: (saveId) => {
     const save = get().saves.find((x) => x.id === saveId);
     if (!save) return null;
-    return rollSeasonEnd(save, mulberry32(randSeed()));
+    try {
+      return rollSeasonEnd(save, mulberry32(randSeed()));
+    } catch (e) {
+      console.error("previewSeasonEnd error:", e);
+      return null;
+    }
   },
 
   confirmSeasonAndOffer: async (saveId, chosen, result) => {

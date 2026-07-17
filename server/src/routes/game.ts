@@ -8,6 +8,7 @@ import {
   computeSeasonAwards,
   computeSeasonTrophies,
 } from "../services/awards-engine.js";
+import { calcAttributeGrowth } from "../services/attribute-growth.js";
 import { rngFor, range } from "../services/rng.js";
 
 export const gameRouter = Router();
@@ -90,27 +91,36 @@ gameRouter.get("/saves/:id/matches/next/preview", async (req, res) => {
   );
 
   // Generate news & social for preview (mirrors client-side mkNews logic)
-  const resultKey = out.red
-    ? "card_red"
-    : out.teamResult === "L"
-      ? "loss"
-      : out.teamResult === "D"
-        ? "draw"
-        : out.teamResult === "W"
-          ? out.goals >= 3
-            ? "hattrick"
-            : out.goals === 2
-              ? "brace"
-              : out.goals === 1
-                ? "goal"
-                : out.assists >= 2
-                  ? "assist"
-                  : "win"
-          : out.motm
-            ? "motm"
-            : "draw";
+  const resultKey = out.minutes === 0
+    ? out.selection === "injured" ? "injured"
+      : out.selection === "suspended" ? "suspended"
+      : "benched"
+    : out.red
+      ? "card_red"
+      : out.teamResult === "L"
+        ? "loss"
+        : out.teamResult === "D"
+          ? "draw"
+          : out.teamResult === "W"
+            ? out.goals >= 3
+              ? "hattrick"
+              : out.goals === 2
+                ? "brace"
+                : out.goals === 1
+                  ? "goal"
+                  : out.assists >= 2
+                    ? "assist"
+                    : "win"
+            : out.motm
+              ? "motm"
+              : "draw"
 
   const newsTemplates: Record<string, string[]> = {
+    injured: ["{player} cedera, absen saat {club} {goalsFor}-{goalsAgainst} {opp}.",
+              "Cedera! {player} absen saat {club} {goalsFor}-{goalsAgainst} {opp}."],
+    suspended: ["{player} sanksi kartu, absen saat {club} {goalsFor}-{goalsAgainst} {opp}.",
+                "{player} akumulasi kartu, absen saat {club} {goalsFor}-{goalsAgainst} {opp}."],
+    benched: ["{player} tidak dimainkan saat {club} {goalsFor}-{goalsAgainst} {opp}."],
     win: [
       "{player} bawa {club} menang {goalsFor}-{goalsAgainst} vs {opp}! Rating {rating}.",
       "Kemenangan penting {club} {goalsFor}-{goalsAgainst} atas {opp}. {player} rating {rating}.",
@@ -460,11 +470,13 @@ gameRouter.post("/saves/:id/season/simulate", async (req, res) => {
 
       // Create spinLog entry
       const logId = `log-${Date.now()}-${simulated}`;
-      const summary = out.selection === "injured"
-        ? `Cedera, absen â€¢ ${out.teamResult} ${out.team_goals}-${out.opp_goals}`
-        : out.selection === "suspended"
-          ? `Sanksi kartu, absen â€¢ ${out.teamResult} ${out.team_goals}-${out.opp_goals}`
-          : `${out.teamResult} ${out.team_goals}-${out.opp_goals} â€¢ ${out.goals}G ${out.assists}A rating ${out.rating}`;
+      const summary = isApp
+        ? `${out.teamResult} ${out.team_goals}-${out.opp_goals} • ${out.goals}G ${out.assists}A rating ${out.rating}`
+        : out.selection === "injured"
+          ? `Cedera, absen • ${out.teamResult} ${out.team_goals}-${out.opp_goals}`
+          : out.selection === "suspended"
+            ? `Sanksi kartu, absen • ${out.teamResult} ${out.team_goals}-${out.opp_goals}`
+            : `Tidak dimainkan • ${out.teamResult} ${out.team_goals}-${out.opp_goals}`;
       spinLog.unshift({
         id: logId,
         type: "match",
@@ -476,18 +488,25 @@ gameRouter.post("/saves/:id/season/simulate", async (req, res) => {
       });
 
       // Generate news
-      const resultKey = out.red
-        ? "card_red"
-        : out.teamResult === "L" ? "loss"
-        : out.teamResult === "D" ? "draw"
-        : out.teamResult === "W"
-          ? out.goals >= 3 ? "hattrick"
-          : out.goals === 2 ? "brace"
-          : out.goals === 1 ? "goal"
-          : out.assists >= 2 ? "assist"
-          : "win"
-        : out.motm ? "motm" : "draw";
+      const resultKey = !isApp
+        ? out.selection === "injured" ? "injured"
+          : out.selection === "suspended" ? "suspended"
+          : "benched"
+        : out.red
+          ? "card_red"
+          : out.teamResult === "L" ? "loss"
+          : out.teamResult === "D" ? "draw"
+          : out.teamResult === "W"
+            ? out.goals >= 3 ? "hattrick"
+            : out.goals === 2 ? "brace"
+            : out.goals === 1 ? "goal"
+            : out.assists >= 2 ? "assist"
+            : "win"
+          : out.motm ? "motm" : "draw";
       const newsTemplates: Record<string, string[]> = {
+        injured: ["{player} cedera, absen saat {club} {goalsFor}-{goalsAgainst} {opp}."],
+        suspended: ["{player} sanksi kartu, absen saat {club} {goalsFor}-{goalsAgainst} {opp}."],
+        benched: ["{player} tidak dimainkan saat {club} {goalsFor}-{goalsAgainst} {opp}."],
         win: ["{player} bawa {club} menang {goalsFor}-{goalsAgainst} vs {opp}! Rating {rating}."],
         draw: ["{club} seri {goalsFor}-{goalsAgainst} vs {opp}. {player} rating {rating}."],
         loss: ["{club} kalah {goalsFor}-{goalsAgainst} dari {opp}. {player} rating {rating}."],
@@ -512,8 +531,8 @@ gameRouter.post("/saves/:id/season/simulate", async (req, res) => {
       newsArr.unshift({
         id: `news-${Date.now()}-${simulated}`,
         title: newsTitle,
-        body: `${club.short} ${out.team_goals}-${out.opp_goals} ${opp.short} â€¢ Musim ${seasonIdx}, Pekan ${matchday}`,
-        tag: "match",
+        body: `${club.short} ${out.team_goals}-${out.opp_goals} ${opp.short} • Musim ${seasonIdx}, Pekan ${matchday}`,
+        tag: isApp ? "match" : "injury",
         season: seasonIdx,
         matchday,
       });
@@ -699,6 +718,7 @@ gameRouter.post("/saves/:id/season/:idx/awards/commit", async (req, res) => {
           seasonIdx,
           a.award_id,
           n.rank,
+
           n.name,
           n.club_id ?? null,
           n.is_you,
@@ -707,7 +727,22 @@ gameRouter.post("/saves/:id/season/:idx/awards/commit", async (req, res) => {
       );
     }
   }
-  res.json({ trophies, awardsCount: awards.length });
+
+  // Attribute growth
+  const growth = calcAttributeGrowth(agg, awards, save.attributes.overall);
+  if (growth > 0) {
+    const newOverall = Math.min(99, save.attributes.overall + growth);
+    const prevAttrs = save.attributes;
+    prevAttrs.overall = newOverall;
+    prevAttrs.OVR_history = prevAttrs.OVR_history ?? [];
+    prevAttrs.OVR_history.push({ season: seasonIdx, overall: newOverall });
+    await query(
+      `UPDATE saves SET data = jsonb_set(data, '{attributes}', $1::jsonb) WHERE id = $2`,
+      [JSON.stringify(prevAttrs), req.params.id],
+    );
+  }
+
+  res.json({ trophies, awardsCount: awards.length, growth });
 });
 
 // ----- Read: trophies & awards for a save -----

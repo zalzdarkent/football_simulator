@@ -67,7 +67,8 @@ export function calcTeamStrength(clubId: string, saveSeed: number, seasonIdx: nu
 export function simulateMatch(input: MatchInput, rng: RNG): MatchOutput {
   const { overall: ovr, position: pos, club, opponent: opp, home, competition } = input;
 
-  const startProb = Math.min(0.95, 0.4 + (ovr - (100 - club.tier * 12)) / 40);
+  const expectedOvr = 50 + (club.reputation - 50) * 0.6;
+  const startProb = Math.min(0.95, Math.max(0.05, 0.4 + (ovr - expectedOvr) / 10));
   let selection: MatchOutput["selection"];
   const rSel = rng();
   if (input.suspendedMatches && input.suspendedMatches > 0) selection = "suspended";
@@ -141,15 +142,15 @@ export function simulateMatch(input: MatchInput, rng: RNG): MatchOutput {
   const cleanSheet = ga === 0 && ["GK", "CB", "LB", "RB", "CDM"].includes(pos);
   const saves = pos === "GK" ? range(2, 8, rng) + (cleanSheet ? range(0, 3, rng) : 0) : 0;
 
-  let rating = 6.4 + (ovr - 70) * 0.015;
-  rating += goals * 0.8 + assists * 0.5;
-  if (tr === "W") rating += 0.3;
-  if (tr === "L") rating -= 0.4;
+  let rating = 6.5 + (ovr - 60) * 0.025;
+  rating += goals * 1.4 + assists * 0.6;
+  if (tr === "W") rating += 0.5;
+  if (tr === "L") rating -= 0.2;
   if (red) rating -= 1.5;
   if (yellow) rating -= 0.1;
   if (cleanSheet) rating += 0.3;
   if (pos === "GK") rating += (saves - 4) * 0.05;
-  rating += (rng() - 0.5) * 0.8;
+  rating += (rng() - 0.5) * 0.4;
   rating = Math.max(3, Math.min(10, +rating.toFixed(1)));
 
   const motm = rating >= 8.5 && (goals + assists + (cleanSheet && pos === "GK" ? 1 : 0)) >= 1;

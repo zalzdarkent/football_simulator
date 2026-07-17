@@ -34,13 +34,14 @@ function SeasonEnd() {
     }).catch(console.error);
   }, []);
 
-  if (!save) return null;
-
   // Load result immediately without spin
   useEffect(() => {
+    if (!save) return;
     const r = preview(save.id);
     setResult(r);
-  }, [save.id, preview]);
+  }, [save?.id, preview]);
+
+  if (!save) return null;
 
   const finalize = () => {
     if (!result || !chosen) return;

@@ -6,7 +6,8 @@ import { generateLeagueStandings } from "./league";
 
 // Season-end: compute league position, trophies, awards, transfer offers
 export function rollSeasonEnd(save: Save, rng: RNG): SeasonEndResult {
-  const club = clubById(save.currentClub.clubId)!;
+  const club = clubById(save.currentClub.clubId);
+  if (!club) return { seasonIndex: save.season.index, leaguePosition: 99, trophies: [], awards: [], offers: [], renewal: undefined, playerOfTheYear: false };
   const seasonIdx = save.season.index;
   const stats = save.season.currentStats;
   const avgRating = stats.ratingCount ? stats.ratingSum / stats.ratingCount : 6.5;
@@ -18,11 +19,11 @@ export function rollSeasonEnd(save: Save, rng: RNG): SeasonEndResult {
   const trophies: TrophyRecord[] = [];
   // domestic league
   if (leaguePosition === 1) {
-    const leagueComp = COMPETITIONS.find((c) => c.league === club.league && c.scope === "domestic-league")!;
-    trophies.push({ id: uid(), competitionId: leagueComp.id, season: seasonIdx, clubId: club.id });
+    const leagueComp = COMPETITIONS.find((c) => (c.league_id || c.league) === club.league && c.scope === "domestic-league");
+    if (leagueComp) trophies.push({ id: uid(), competitionId: leagueComp.id, season: seasonIdx, clubId: club.id });
   }
   // domestic cup
-  const cup = COMPETITIONS.find((c) => c.league === club.league && c.scope === "domestic-cup");
+  const cup = COMPETITIONS.find((c) => (c.league_id || c.league) === club.league && c.scope === "domestic-cup");
   if (cup) {
     const cupChance = club.tier === 1 ? 0.25 : club.tier === 2 ? 0.15 : 0.05;
     if (chance(cupChance, rng)) trophies.push({ id: uid(), competitionId: cup.id, season: seasonIdx, clubId: club.id });

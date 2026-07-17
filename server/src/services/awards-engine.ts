@@ -102,9 +102,10 @@ export async function computeSeasonAwards(agg: PlayerSeasonAgg, seed: number): P
   const results: AwardResult[] = [];
 
   // Base "quality" of your season
-  const perfScore = agg.avg_rating * 10 + agg.goals * 2 + agg.assists * 1.5 + agg.clean_sheets * 1.5 + agg.motm_count * 2;
+  const perfScore = agg.avg_rating * 10 + agg.goals * 2 + agg.assists * 1.5 + agg.clean_sheets * 1.5 + agg.motm_count * 2 + Math.min(agg.apps, 38) * 0.5;
   const trophyBonus = (agg.domestic_league_won ? 25 : 0) + (agg.ucl_won ? 40 : 0) + agg.trophies.length * 5;
-  const worldScore = perfScore + trophyBonus;
+  const appsFactor = Math.min(1, Math.max(0.3, agg.apps / 25));
+  const worldScore = (perfScore + trophyBonus) * appsFactor;
 
   const mk = (award_id: string, nominees: ReturnType<typeof buildNominees>, detail?: string | null): AwardResult => {
     const yours = nominees.find(n => n.is_you);
