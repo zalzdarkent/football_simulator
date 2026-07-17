@@ -13,7 +13,7 @@ function Stats() {
   if (!save) return null;
   const rows = [
     ...save.history.map((h) => ({
-      season: h.seasonIndex, age: h.age, club: clubById(h.clubId)?.short ?? "—",
+      season: h.seasonIndex, age: h.age, club: clubById(h.clubId) ?? null,
       apps: h.stats.apps, goals: h.stats.goals, assists: h.stats.assists,
       cs: h.stats.cleanSheets,
       rating: h.stats.ratingCount ? (h.stats.ratingSum / h.stats.ratingCount).toFixed(2) : "—",
@@ -22,7 +22,7 @@ function Stats() {
     // current in-progress season
     {
       season: save.season.index, age: save.player.age,
-      club: clubById(save.currentClub.clubId)?.short ?? "—",
+      club: clubById(save.currentClub.clubId) ?? null,
       apps: save.season.currentStats.apps, goals: save.season.currentStats.goals,
       assists: save.season.currentStats.assists, cs: save.season.currentStats.cleanSheets,
       rating: save.season.currentStats.ratingCount
@@ -48,7 +48,8 @@ function Stats() {
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-b border-border/60 last:border-0">
-                  <Td>{r.season}</Td><Td>{r.age}</Td><Td>{r.club}</Td>
+                  <Td>{r.season}</Td><Td>{r.age}</Td>
+                  <Td><ClubLogo club={r.club} /></Td>
                   <Td>{r.apps}</Td>
                   <Td className="font-semibold text-primary">{r.goals}</Td>
                   <Td>{r.assists}</Td>
@@ -78,4 +79,31 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
   return <td className={`px-4 py-3 ${className}`}>{children}</td>;
+}
+
+function ClubLogo({ club }: { club: { name: string; short: string; logoUrl?: string; colors?: [string, string] } | null }) {
+  if (!club) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex items-center gap-2">
+      {club.logoUrl ? (
+        <img
+          src={club.logoUrl}
+          alt={club.name}
+          title={club.name}
+          className="w-6 h-6 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+          }}
+        />
+      ) : null}
+      <div
+        title={club.name}
+        className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-display font-bold ${club.logoUrl ? "hidden" : ""}`}
+        style={{ backgroundColor: club.colors?.[0] || "#333", color: club.colors?.[1] || "#fff" }}
+      >
+        {club.short}
+      </div>
+    </div>
+  );
 }

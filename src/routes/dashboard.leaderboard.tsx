@@ -57,7 +57,7 @@ function Table({ rows, valueKey, label }: { rows: ReturnType<typeof useStore.get
               <tr key={r.id} className="border-b border-border/60 last:border-0">
                 <td className="px-4 py-3 font-display font-bold">{i + 1}</td>
                 <td className="px-4 py-3">{r.player.name} <span className="text-xs text-muted-foreground">· {r.player.position}</span></td>
-                <td className="px-4 py-3">{clubById(r.currentClub.clubId)?.short ?? "—"}</td>
+                <td className="px-4 py-3"><ClubLogo club={clubById(r.currentClub.clubId) ?? null} /></td>
                 <td className="px-4 py-3 text-right font-semibold text-primary">{val(r)}</td>
               </tr>
             ))}
@@ -65,5 +65,32 @@ function Table({ rows, valueKey, label }: { rows: ReturnType<typeof useStore.get
         </table>
       </CardContent>
     </Card>
+  );
+}
+
+function ClubLogo({ club }: { club: { name: string; short: string; logoUrl?: string; colors?: [string, string] } | null }) {
+  if (!club) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex items-center gap-2">
+      {club.logoUrl ? (
+        <img
+          src={club.logoUrl}
+          alt={club.name}
+          title={club.name}
+          className="w-6 h-6 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+          }}
+        />
+      ) : null}
+      <div
+        title={club.name}
+        className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-display font-bold ${club.logoUrl ? "hidden" : ""}`}
+        style={{ backgroundColor: club.colors?.[0] || "#333", color: club.colors?.[1] || "#fff" }}
+      >
+        {club.short}
+      </div>
+    </div>
   );
 }

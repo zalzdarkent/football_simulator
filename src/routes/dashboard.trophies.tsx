@@ -42,9 +42,7 @@ function Trophies() {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {list.map((t) => (
-                        <span key={t.id} className="text-xs bg-panel-2 rounded px-2 py-0.5">
-                          S{t.season} · {clubById(t.clubId)?.short}
-                        </span>
+                        <SeasonClubChip key={t.id} season={t.season} club={clubById(t.clubId) ?? null} />
                       ))}
                     </div>
                   </CardContent>
@@ -72,9 +70,7 @@ function Trophies() {
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {list.map((a) => (
-                          <span key={a.id} className="text-xs bg-panel-2 rounded px-2 py-0.5">
-                            S{a.season} · {clubById(a.clubId)?.short}
-                          </span>
+                          <SeasonClubChip key={a.id} season={a.season} club={clubById(a.clubId) ?? null} />
                         ))}
                       </div>
                     </CardContent>
@@ -103,4 +99,38 @@ function groupBy<T>(arr: T[], key: (x: T) => string): Record<string, T[]> {
     (acc[k] ||= []).push(x);
     return acc;
   }, {} as Record<string, T[]>);
+}
+
+function SeasonClubChip({ season, club }: { season: number; club: { name: string; short: string; logoUrl?: string; colors?: [string, string] } | null }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs bg-panel-2 rounded px-2 py-0.5">
+      <span>S{season}</span>
+      <span className="text-muted-foreground">·</span>
+      {club ? (
+        <>
+          {club.logoUrl ? (
+            <img
+              src={club.logoUrl}
+              alt={club.name}
+              title={club.name}
+              className="w-4 h-4 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+              }}
+            />
+          ) : null}
+          <span
+            title={club.name}
+            className={`w-4 h-4 rounded-sm flex items-center justify-center text-[7px] font-display font-bold ${club.logoUrl ? "hidden" : ""}`}
+            style={{ backgroundColor: club.colors?.[0] || "#333", color: club.colors?.[1] || "#fff" }}
+          >
+            {club.short}
+          </span>
+        </>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </span>
+  );
 }
