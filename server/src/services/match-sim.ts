@@ -4,13 +4,16 @@ import { ClubRow, CompRow } from "./reference-cache.js";
 
 export type Position = "GK" | "CB" | "LB" | "RB" | "CDM" | "CM" | "CAM" | "LW" | "RW" | "ST";
 
+// Probabilitas gol & assist per posisi — disesuaikan agar lebih realistis:
+// ST OVR 86 starter rata-rata ~0.60 gol/match (bukan >1.3 seperti sebelumnya).
+// Gol 4 dalam satu laga tetap bisa terjadi, tapi jadi sangat langka.
 const GOAL_BASE: Record<Position, number> = {
-  GK: 0.005, CB: 0.05, LB: 0.06, RB: 0.06, CDM: 0.1,
-  CM: 0.18, CAM: 0.35, LW: 0.4, RW: 0.4, ST: 0.55,
+  GK: 0.005, CB: 0.03, LB: 0.04, RB: 0.04, CDM: 0.06,
+  CM: 0.09, CAM: 0.15, LW: 0.18, RW: 0.18, ST: 0.24,
 };
 const ASSIST_BASE: Record<Position, number> = {
-  GK: 0.005, CB: 0.03, LB: 0.15, RB: 0.15, CDM: 0.15,
-  CM: 0.3, CAM: 0.5, LW: 0.4, RW: 0.4, ST: 0.25,
+  GK: 0.005, CB: 0.02, LB: 0.10, RB: 0.10, CDM: 0.09,
+  CM: 0.18, CAM: 0.28, LW: 0.22, RW: 0.22, ST: 0.14,
 };
 
 export type MatchInput = {
