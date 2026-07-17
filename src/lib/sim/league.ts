@@ -52,9 +52,12 @@ export function generateLeagueStandings(save: Save): StandingRow[] {
     const rng = mulberry32(hash);
     
     let w = 0, d = 0, l = 0, gf = 0, ga = 0;
-    const strength = c.reputation / 100;
-    const winProb = 0.2 + strength * 0.45;
-    const drawProb = 0.25;
+    // Reputation dibandingkan ke rata-rata reputation liga (bukan skala absolut /100),
+    // biar konsisten dgn cara match-sim.ts menghitung strengthDiff antar klub.
+    const leagueAvgRep = leagueClubs.reduce((s, x) => s + x.reputation, 0) / leagueClubs.length;
+    const strengthDiff = (c.reputation - leagueAvgRep) / 100;
+    const winProb = Math.max(0.1, Math.min(0.75, 0.4 + strengthDiff * 0.9));
+    const drawProb = Math.max(0.16, 0.27 - Math.abs(strengthDiff) * 0.3);
     
     for (let m = 0; m < matchday; m++) {
       const roll = rng();

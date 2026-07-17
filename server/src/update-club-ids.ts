@@ -190,10 +190,6 @@ async function main() {
   console.log("🔄 Updating club IDs to match frontend...\n");
 
   try {
-    // Clear players table to avoid foreign key constraint issues
-    await query("DELETE FROM players");
-    console.log("Cleared players table\n");
-
     const { rows: clubs } = await query("SELECT id, name FROM clubs");
     console.log(`Found ${clubs.length} clubs in database\n`);
 

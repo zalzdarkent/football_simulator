@@ -1,7 +1,7 @@
 ﻿import { Router } from "express";
 import { query } from "../db.js";
 import { setupSeason } from "../services/season-setup.js";
-import { simulateMatchDeterministic } from "../services/match-sim.js";
+import { simulateMatchDeterministic, calcTeamStrength } from "../services/match-sim.js";
 import { clubById, compById } from "../services/reference-cache.js";
 import {
   computePlayerAgg,
@@ -65,6 +65,11 @@ gameRouter.get("/saves/:id/matches/next/preview", async (req, res) => {
   const comp = await compById(m.competition_id);
   if (!club || !opp || !comp) return res.status(400).json({ error: "Missing reference data" });
 
+  const saveSeed = save.seed ?? 1;
+  const seasonIdx = save.season?.index ?? 0;
+  const clubStrength = calcTeamStrength(club.id, saveSeed, seasonIdx);
+  const oppStrength = calcTeamStrength(opp.id, saveSeed, seasonIdx);
+
   const out = simulateMatchDeterministic(
     {
       overall: save.attributes.overall,
@@ -76,8 +81,10 @@ gameRouter.get("/saves/:id/matches/next/preview", async (req, res) => {
       competition: comp,
       suspendedMatches: save.suspendedMatches ?? 0,
       injuredMatches: save.injuredMatches ?? 0,
+      clubStrength,
+      oppStrength,
     },
-    save.seed ?? 1,
+    saveSeed,
     m.id,
     previewSeed,
   );
@@ -255,6 +262,11 @@ gameRouter.post("/saves/:id/matches/:mid/commit", async (req, res) => {
   const comp = await compById(m.competition_id);
   if (!club || !opp || !comp) return res.status(400).json({ error: "Missing reference data" });
 
+  const saveSeed = save.seed ?? 1;
+  const seasonIdx = save.season?.index ?? 0;
+  const clubStrength = calcTeamStrength(club.id, saveSeed, seasonIdx);
+  const oppStrength = calcTeamStrength(opp.id, saveSeed, seasonIdx);
+
   const out = simulateMatchDeterministic(
     {
       overall: save.attributes.overall,
@@ -266,8 +278,10 @@ gameRouter.post("/saves/:id/matches/:mid/commit", async (req, res) => {
       competition: comp,
       suspendedMatches: save.suspendedMatches ?? 0,
       injuredMatches: save.injuredMatches ?? 0,
+      clubStrength,
+      oppStrength,
     },
-    save.seed ?? 1,
+    saveSeed,
     m.id,
     previewSeed,
   );
@@ -372,6 +386,8 @@ gameRouter.post("/saves/:id/season/simulate", async (req, res) => {
       if (!opp || !comp) continue;
 
       const previewSeed = 0;
+      const clubStrength = calcTeamStrength(club.id, seed, seasonIdx);
+      const oppStrength = calcTeamStrength(opp.id, seed, seasonIdx);
       const out = simulateMatchDeterministic(
         {
           overall: save.attributes.overall,
@@ -383,6 +399,8 @@ gameRouter.post("/saves/:id/season/simulate", async (req, res) => {
           competition: comp,
           suspendedMatches,
           injuredMatches,
+          clubStrength,
+          oppStrength,
         },
         seed,
         m.id,

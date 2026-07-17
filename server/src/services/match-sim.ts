@@ -23,6 +23,10 @@ export type MatchInput = {
   competition: CompRow;
   suspendedMatches?: number;
   injuredMatches?: number;
+  // Offset performa musiman (dari calcTeamStrength), opsional — kalau nggak dikasih,
+  // dianggap 0 (klub main sesuai reputation dasarnya, tanpa bumbu form musiman).
+  clubStrength?: number;
+  oppStrength?: number;
 };
 
 export type MatchOutput = {
@@ -42,6 +46,24 @@ export type MatchOutput = {
   injuryMatches: number;
 };
 
+// Sigmoid: memetakan selisih kekuatan (roughly -1..1) ke peluang 0..1 dengan kurva halus,
+// jadi gap besar (klub top vs klub kecil) bisa dominan tanpa peluang jadi negatif/di atas 1.
+function sigmoid(x: number, k: number): number {
+  return 1 / (1 + Math.exp(-x * k));
+}
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+// Variasi performa musiman per klub: deterministic berdasarkan (save, klub, musim),
+// jadi klub yang sama akan konsisten "lagi on-fire" atau "lagi jeblok" di seluruh
+// pertandingan dalam satu musim itu — bukan diroll ulang tiap match.
+// Rentang offset: -7..+7, ditambahkan ke reputation dasar klub sebelum dihitung strengthDiff.
+export function calcTeamStrength(clubId: string, saveSeed: number, seasonIdx: number): number {
+  const rng = rngFor(saveSeed, "team-strength", clubId, seasonIdx);
+  return (rng() - 0.5) * 14;
+}
+
 export function simulateMatch(input: MatchInput, rng: RNG): MatchOutput {
   const { overall: ovr, position: pos, club, opponent: opp, home, competition } = input;
 
@@ -55,11 +77,43 @@ export function simulateMatch(input: MatchInput, rng: RNG): MatchOutput {
   else if (rSel < startProb + 0.2) selection = "sub";
   else selection = "benched";
 
-  const strengthDiff = (club.reputation - opp.reputation) / 100;
+  // Reputation dasar klub, disesuaikan sama form musiman (kalau dikasih lewat calcTeamStrength).
+  const clubSeasonRating = club.reputation + (input.clubStrength ?? 0);
+  const oppSeasonRating = opp.reputation + (input.oppStrength ?? 0);
+
+  // Kontribusi kamu ke kekuatan klub: kalau starter, klub "dianggap" sedikit lebih kuat/lemah
+  // dari reputation dasarnya tergantung overall kamu dibanding reputation klub sendiri.
+  // Bobotnya kecil (satu pemain dari 11) tapi nyata — biar starman beneran ngefek ke hasil tim.
+  const squadWeight = selection === "starter" ? 0.16 : selection === "sub" ? 0.07 : 0;
+  const effectiveClubRating = clubSeasonRating + (ovr - clubSeasonRating) * squadWeight;
+
+  const strengthDiff = (effectiveClubRating - oppSeasonRating) / 100;
   // Competition difficulty boost: continental & cup finals harder
   const compBoost = (competition.tier_boost ?? 0);
-  const winP = 0.35 + strengthDiff * 0.35 + (home ? 0.08 : -0.02) - compBoost * 0.15;
-  const drawP = 0.28;
+  const homeAdv = home ? 0.06 : -0.03;
+
+  // Performa kamu di laga ini dihitung DULU, sebelum hasil tim diputuskan — supaya
+  // gol/assist kamu betulan mendorong peluang menang tim, bukan cuma "dicocok-cocokin" belakangan.
+  const minutes = selection === "starter" ? range(70, 90, rng)
+    : selection === "sub" ? range(15, 40, rng) : 0;
+  const perfMod = (ovr - 70) / 40 + (selection === "starter" ? 0 : -0.3);
+  const goalP = Math.max(0, GOAL_BASE[pos] * (1 + perfMod)) * (minutes / 90);
+  const assistP = Math.max(0, ASSIST_BASE[pos] * (1 + perfMod)) * (minutes / 90);
+
+  let goals = 0;
+  let assists = 0;
+  if (selection === "starter" || selection === "sub") {
+    for (let i = 0; i < 4; i++) if (chance(goalP / 2, rng)) goals++;
+    for (let i = 0; i < 3; i++) if (chance(assistP / 2, rng)) assists++;
+  }
+
+  // Nudge peluang menang berdasarkan kontribusi nyata kamu di laga ini (gol/assist),
+  // dibatasi biar nggak jadi satu-satunya faktor penentu.
+  const performanceNudge = Math.min(0.12, goals * 0.05 + assists * 0.025);
+
+  const winP = clamp(sigmoid(strengthDiff, 2.2) + performanceNudge + homeAdv - compBoost * 0.12, 0.05, 0.9);
+  const drawBase = 0.27 - Math.abs(strengthDiff) * 0.08; // makin timpang kekuatannya, makin jarang seri
+  const drawP = clamp(drawBase, 0.14, 0.28);
   const teamRoll = rng();
   const tr: "W" | "D" | "L" = teamRoll < winP ? "W" : teamRoll < winP + drawP ? "D" : "L";
 
@@ -73,24 +127,16 @@ export function simulateMatch(input: MatchInput, rng: RNG): MatchOutput {
     };
   }
 
-  const minutes = selection === "starter" ? range(70, 90, rng) : range(15, 40, rng);
-  const perfMod = (ovr - 70) / 40 + (selection === "starter" ? 0 : -0.3);
-  const goalP = Math.max(0, GOAL_BASE[pos] * (1 + perfMod)) * (minutes / 90);
-  const assistP = Math.max(0, ASSIST_BASE[pos] * (1 + perfMod)) * (minutes / 90);
-
-  let goals = 0;
-  for (let i = 0; i < 4; i++) if (chance(goalP / 2, rng)) goals++;
-  let assists = 0;
-  for (let i = 0; i < 3; i++) if (chance(assistP / 2, rng)) assists++;
-  if (tr === "L") goals = Math.max(0, goals - (chance(0.4, rng) ? 1 : 0));
-
   const yellow = chance(0.14, rng);
   const red = chance(0.02, rng);
 
+  // Skor tim dibangun MENGIKUTI performa kamu (bukan sebaliknya) — gol/assist kamu
+  // nggak pernah dipotong cuma biar "pas" sama hasil tim yang sudah ditentukan duluan.
+  const contribution = goals + assists;
   let gf: number, ga: number;
-  if (tr === "W") { gf = Math.max(goals + assists, range(1, 3, rng)); ga = range(0, Math.max(0, gf - 1), rng); }
-  else if (tr === "D") { gf = range(0, 2, rng); ga = gf; goals = Math.min(goals, gf); }
-  else { gf = range(0, 1, rng); ga = range(gf + 1, gf + 3, rng); goals = Math.min(goals, gf); }
+  if (tr === "W") { gf = Math.max(contribution, range(1, 3, rng)); ga = range(0, Math.max(0, gf - 1), rng); }
+  else if (tr === "D") { gf = Math.max(contribution, range(0, 2, rng)); ga = gf; }
+  else { gf = Math.max(contribution, range(0, 1, rng)); ga = range(gf + 1, gf + 3, rng); }
 
   const cleanSheet = ga === 0 && ["GK", "CB", "LB", "RB", "CDM"].includes(pos);
   const saves = pos === "GK" ? range(2, 8, rng) + (cleanSheet ? range(0, 3, rng) : 0) : 0;

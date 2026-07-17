@@ -99,52 +99,14 @@ export async function migrate() {
     ALTER TABLE competitions ADD COLUMN IF NOT EXISTS teams_count SMALLINT NOT NULL DEFAULT 20;
     ALTER TABLE competitions ADD COLUMN IF NOT EXISTS rounds JSONB;
 
-    -- Add logo_url column to clubs table if it doesn't exist
-    ALTER TABLE clubs ADD COLUMN IF NOT EXISTS logo_url TEXT;
-
-    -- Add api_id column to clubs to store numeric ID from API-Football
+    -- Kolom logo/api_id klub (dipertahankan, dipakai fitur logo klub)
     ALTER TABLE clubs ADD COLUMN IF NOT EXISTS api_id INT;
     CREATE INDEX IF NOT EXISTS idx_clubs_api_id ON clubs(api_id);
 
-    -- Players table for real football data
-    CREATE TABLE IF NOT EXISTS players (
-      id VARCHAR(64) PRIMARY KEY,
-      name TEXT NOT NULL,
-      firstname TEXT,
-      lastname TEXT,
-      age SMALLINT,
-      nationality TEXT,
-      position VARCHAR(8),
-      club_id VARCHAR(64) REFERENCES clubs(id),
-      photo_url TEXT,
-      height VARCHAR(16),
-      weight VARCHAR(16)
-    );
-
-    -- Fix nationality column type if it was previously VARCHAR(4)
-    ALTER TABLE players ALTER COLUMN nationality TYPE TEXT;
-    -- Fix height/weight column type if they were previously VARCHAR(8)
-    ALTER TABLE players ALTER COLUMN height TYPE TEXT;
-    ALTER TABLE players ALTER COLUMN weight TYPE TEXT;
-
-    -- Player statistics table
-    CREATE TABLE IF NOT EXISTS player_stats (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      player_id VARCHAR(64) NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      season INT NOT NULL,
-      league_id VARCHAR(32) NOT NULL,
-      appearances INT DEFAULT 0,
-      goals INT DEFAULT 0,
-      assists INT DEFAULT 0,
-      minutes INT DEFAULT 0,
-      rating REAL DEFAULT 0,
-      yellow_cards INT DEFAULT 0,
-      red_cards INT DEFAULT 0,
-      UNIQUE (player_id, season, league_id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_players_club ON players(club_id);
-    CREATE INDEX IF NOT EXISTS idx_player_stats_season ON player_stats(season, league_id);
+    -- Data pemain real (via API-Football) tidak lagi dipakai — cuma kamu sendiri
+    -- yang jadi pemain di game ini, jadi tabel referensi pemain lain dihapus.
+    DROP TABLE IF EXISTS player_stats;
+    DROP TABLE IF EXISTS players;
 
     CREATE TABLE IF NOT EXISTS season_competitions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

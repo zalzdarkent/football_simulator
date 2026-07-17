@@ -14,8 +14,8 @@
     "sync:clubs:force": "tsx src/sync-master.ts --type=clubs --force",
     "sync:awards": "tsx src/sync-master.ts --type=awards",
     "sync:awards:force": "tsx src/sync-master.ts --type=awards --force",
-    "sync:players": "tsx src/sync-players.ts",
     "update:club-ids": "tsx src/update-club-ids.ts",
+    "update:club-reputation": "tsx src/update-club-reputation.ts",
     "check:logos": "tsx src/check-null-logos.ts",
     "update:logos": "tsx src/update-missing-logos.ts",
     "check:arsenal": "tsx src/check-arsenal.ts"
