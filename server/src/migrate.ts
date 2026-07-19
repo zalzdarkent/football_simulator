@@ -151,6 +151,27 @@ export async function migrate() {
     CREATE INDEX IF NOT EXISTS idx_matches_save_season ON matches(save_id, season_idx, order_key);
     CREATE INDEX IF NOT EXISTS idx_matches_played ON matches(save_id, played);
 
+    CREATE TABLE IF NOT EXISTS fixtures (
+      id BIGINT PRIMARY KEY,
+      league_id BIGINT NOT NULL,
+      league_name TEXT NOT NULL,
+      match_date DATE NOT NULL,
+      kickoff_at TIMESTAMPTZ NOT NULL,
+      home_team_id BIGINT NOT NULL,
+      home_team_name TEXT NOT NULL,
+      home_score SMALLINT NOT NULL DEFAULT 0,
+      away_team_id BIGINT NOT NULL,
+      away_team_name TEXT NOT NULL,
+      away_score SMALLINT NOT NULL DEFAULT 0,
+      status_id SMALLINT NOT NULL,
+      status_text TEXT,
+      tournament_stage TEXT,
+      raw JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_fixtures_match_date ON fixtures(match_date, league_id, kickoff_at);
+    CREATE INDEX IF NOT EXISTS idx_fixtures_league ON fixtures(league_id, match_date);
+
     CREATE TABLE IF NOT EXISTS trophies (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       save_id VARCHAR(64) NOT NULL REFERENCES saves(id) ON DELETE CASCADE,

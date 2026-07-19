@@ -51,6 +51,9 @@ export const api = {
 
   getClub: (id: string) => request<any>(`/clubs/${id}`),
 
+  getSeasonMatches: (saveId: string, seasonIndex: number) =>
+    request<any[]>(`/saves/${saveId}/season/${seasonIndex}/matches`),
+
   // Match API
   previewNextMatch: (saveId: string, previewSeed?: number) =>
     request<any>(

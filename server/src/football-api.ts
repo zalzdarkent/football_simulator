@@ -1,42 +1,107 @@
-// API-Football service for fetching real football data (Node.js version)
-// Free tier: https://www.api-football.com/
+// RapidAPI football service for fetching real football data (Node.js version).
 
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const API_BASE = "https://v3.football.api-sports.io";
-const API_KEY = process.env.VITE_FOOTBALL_API_KEY || process.env.FOOTBALL_API_KEY;
+const API_BASE = "https://free-api-live-football-data.p.rapidapi.com";
+const API_HOST = "free-api-live-football-data.p.rapidapi.com";
+const API_KEY =
+  process.env.RAPIDAPI_FOOTBALL_KEY ||
+  process.env.VITE_RAPIDAPI_FOOTBALL_KEY ||
+  process.env.FOOTBALL_API_KEY ||
+  process.env.VITE_FOOTBALL_API_KEY;
 
 if (!API_KEY) {
-  throw new Error("FOOTBALL_API_KEY or VITE_FOOTBALL_API_KEY not set in environment");
+  throw new Error("RAPIDAPI_FOOTBALL_KEY or VITE_RAPIDAPI_FOOTBALL_KEY not set in environment");
 }
 
-// League IDs from API-Football
 export const LEAGUE_IDS = {
-  epl: 39,
-  laliga: 140,
-  seriea: 135,
-  bundesliga: 78,
-  ligue1: 61,
-  eredivisie: 88,
-  "liga-pt": 94,
-  "super-lig": 203,
-  mls: 253,
-  saudi: 307,
-  ucl: 2,
-  uel: 3,
-  uecl: 5,
+  // Simulator-mapped leagues (string ID -> numeric API ID)
+  epl: 47,
+  laliga: 87,
+  seriea: 55,
+  bundesliga: 54,
+  ligue1: 53,
+  eredivisie: 57,
+  "liga-pt": 61,
+  "super-lig": 71,
+  mls: 130,
+  saudi: 536,
+  // Continental
+  ucl: 42,
+  uel: 73,
+  uecl: 10216,
 } as const;
+
+// Numeric API IDs for API-only leagues (keyed by DB league id = the numeric string)
+export const API_ONLY_LEAGUE_IDS: Record<string, number> = {
+  "112": 112,   // Argentina - Liga Profesional
+  "113": 113,   // Australia - A-League
+  "40": 40,     // Belgium - First Division A
+  "268": 268,   // Brazil - Serie A
+  "9490": 9490, // Colombia - Categoría Primera A
+  "519": 519,   // Egypt - Premier League
+  "10059": 10059, // Indonesia - Liga 1
+  "223": 223,   // Japan - J. League
+  "230": 230,   // Mexico - Liga MX
+  "530": 530,   // Morocco - Botola Pro
+  "64": 64,     // Scotland - Premiership
+  "9080": 9080, // South Korea - K League 1
+  "10708": 10708, // South Africa - Betway Premiership
+};
 
 export type LeagueCode = keyof typeof LEAGUE_IDS;
 
-interface ApiResponse<T> {
-  results: number;
-  response: T[];
+interface RapidCountry {
+  ccode: string;
+  name: string;
+  localizedName: string;
 }
 
-interface Team {
+interface RapidLeagueCatalogResponse {
+  leagues: Array<{
+    ccode: string;
+    name: string;
+    localizedName: string;
+    leagues: Array<{
+      id: number;
+      name: string;
+      localizedName: string;
+      ccode: string;
+      logo: string;
+    }>;
+  }>;
+}
+
+interface FixtureMatch {
+  id: number;
+  leagueId: number;
+  time: string;
+  home: { id: number; score: number; name: string; longName: string };
+  away: { id: number; score: number; name: string; longName: string };
+  eliminatedTeamId: number | null;
+  statusId: number;
+  tournamentStage: string;
+  status: {
+    utcTime: string;
+    halfs: { firstHalfStarted?: string; secondHalfStarted?: string };
+    periodLength: number;
+    finished: boolean;
+    started: boolean;
+    cancelled: boolean;
+    ongoing?: boolean;
+    scoreStr?: string;
+  };
+  timeTS: number;
+}
+
+interface RapidResponse<T> {
+  status: string;
+  response: T;
+}
+
+interface ClubTeam {
   team: {
     id: number;
     name: string;
@@ -57,101 +122,7 @@ interface Team {
   };
 }
 
-interface Player {
-  player: {
-    id: number;
-    name: string;
-    firstname: string;
-    lastname: string;
-    age: number;
-    birth: {
-      date: string;
-      place: string;
-      country: string;
-    };
-    nationality: string;
-    height: string;
-    weight: string;
-    injured: boolean;
-    photo: string;
-  };
-  statistics: Array<{
-    team: {
-      id: number;
-      name: string;
-      logo: string;
-    };
-    league: {
-      id: number;
-      name: string;
-      country: string;
-      logo: string;
-      flag: string;
-      season: number;
-    };
-    games: {
-      appearences: number;
-      lineups: number;
-      minutes: number;
-      number: number;
-      position: string;
-      rating: string;
-      captain: boolean;
-    };
-    substitutes: {
-      in: number;
-      out: number;
-      bench: number;
-    };
-    shots: {
-      total: number;
-      on: number;
-    };
-    goals: {
-      total: number;
-      conceded: number;
-      assists: number;
-      saves: number;
-    };
-    passes: {
-      total: number;
-      key: number;
-      accuracy: number;
-    };
-    tackles: {
-      total: number;
-      blocks: number;
-      interceptions: number;
-    };
-    duels: {
-      total: number;
-      won: number;
-    };
-    dribbles: {
-      attempts: number;
-      success: number;
-      past: number;
-    };
-    fouls: {
-      drawn: number;
-      committed: number;
-    };
-    cards: {
-      yellow: number;
-      yellowred: number;
-      red: number;
-    };
-    penalty: {
-      won: number;
-      commited: number;
-      scored: number;
-      missed: number;
-      saved: number;
-    };
-  }>;
-}
-
-interface League {
+interface FlattenedLeague {
   league: {
     id: number;
     name: string;
@@ -163,42 +134,22 @@ interface League {
     code: string;
     flag: string;
   };
-  seasons: Array<{
-    year: number;
-    start: string;
-    end: string;
-    current: boolean;
-    coverage: {
-      fixtures: {
-        events: boolean;
-        lineups: boolean;
-        statistics_fixtures: boolean;
-        statistics_players: boolean;
-        standings: boolean;
-        players: boolean;
-        top_scorers: boolean;
-        top_assists: boolean;
-        top_cards: boolean;
-        injuries: boolean;
-        predictions: boolean;
-        odds: boolean;
-      };
-    };
-  }>;
+  seasons: never[];
 }
+
+const logoCache = new Map<number, string>();
+let leagueCatalogCache: FlattenedLeague[] | null = null;
 
 async function request<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${API_BASE}${endpoint}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
-  }
+
+  Object.entries(params ?? {}).forEach(([key, value]) => {
+    url.searchParams.append(key, value);
+  });
 
   const headers: Record<string, string> = {
-    "x-rapidapi-host": "v3.football.api-sports.io",
+    "x-rapidapi-host": API_HOST,
   };
-
   if (API_KEY) {
     headers["x-rapidapi-key"] = API_KEY;
   }
@@ -211,101 +162,201 @@ async function request<T>(endpoint: string, params?: Record<string, string>): Pr
     throw new Error(`API error ${response.status}: ${response.statusText}`);
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
+}
+
+function normalizeLeagueName(name: string) {
+  return name.replace(/\s+/g, " ").trim();
+}
+
+function toApiDate(date: string | Date) {
+  if (date instanceof Date) {
+    return date.toISOString().slice(0, 10).replaceAll("-", "");
+  }
+  return date.includes("-") ? date.replaceAll("-", "") : date;
+}
+
+async function loadLeagueCatalog(): Promise<FlattenedLeague[]> {
+  if (leagueCatalogCache) return leagueCatalogCache;
+
+  const data = await request<RapidResponse<RapidLeagueCatalogResponse>>(
+    "/football-get-all-leagues-with-countries",
+  );
+  leagueCatalogCache = data.response.leagues.flatMap((country) =>
+    country.leagues.map((league) => ({
+      league: {
+        id: league.id,
+        name: normalizeLeagueName(league.name),
+        type: "league",
+        logo: league.logo,
+      },
+      country: {
+        name: country.localizedName || country.name,
+        code: league.ccode,
+        flag: "",
+      },
+      seasons: [],
+    })),
+  );
+
+  return leagueCatalogCache;
+}
+
+async function getTeamLogo(teamId: number) {
+  const cached = logoCache.get(teamId);
+  if (cached) return cached;
+
+  try {
+    const data = await request<RapidResponse<{ url: string }>>("/football-team-logo", {
+      teamid: teamId.toString(),
+    });
+
+    const logo = data.response?.url ?? "";
+    logoCache.set(teamId, logo);
+    return logo;
+  } catch {
+    logoCache.set(teamId, "");
+    return "";
+  }
+}
+
+async function getFixturesByLeagueId(leagueId: number) {
+  const data = await request<RapidResponse<{ matches: FixtureMatch[] }>>(
+    "/football-get-all-matches-by-league",
+    {
+      leagueid: leagueId.toString(),
+    },
+  );
+  return data.response.matches ?? [];
+}
+
+async function getTeamsByLeagueId(leagueId: number): Promise<ClubTeam[]> {
+  const [fixtures, catalog] = await Promise.all([
+    getFixturesByLeagueId(leagueId),
+    loadLeagueCatalog(),
+  ]);
+  const league = catalog.find((item) => item.league.id === leagueId);
+  const countryName = league?.country.name ?? "";
+
+  const teams = new Map<number, ClubTeam>();
+
+  for (const match of fixtures) {
+    for (const side of [match.home, match.away]) {
+      if (teams.has(side.id)) continue;
+
+      teams.set(side.id, {
+        team: {
+          id: side.id,
+          name: side.longName || side.name,
+          code: (side.name || side.longName || String(side.id)).slice(0, 3).toUpperCase(),
+          country: countryName,
+          founded: 0,
+          national: false,
+          logo: "",
+        },
+        venue: {
+          id: 0,
+          name: side.longName || side.name,
+          city: countryName,
+          capacity: 0,
+          image: "",
+          address: "",
+          surface: "",
+        },
+      });
+    }
+  }
+
+  return [...teams.values()];
 }
 
 export const footballApi = {
-  // Get teams by league
-  getTeams: async (leagueCode: LeagueCode, season: number = 2024) => {
-    const leagueId = LEAGUE_IDS[leagueCode];
-    const data = await request<ApiResponse<Team>>(`/teams`, {
-      league: leagueId.toString(),
-      season: season.toString(),
-    });
-    return data.response;
-  },
-
-  // Get teams by numeric league ID
-  getTeamsById: async (leagueId: number, season: number = 2024) => {
-    const data = await request<ApiResponse<Team>>(`/teams`, {
-      league: leagueId.toString(),
-      season: season.toString(),
-    });
-    return data.response;
-  },
-
-  // Get team by ID
-  getTeam: async (teamId: number) => {
-    const data = await request<ApiResponse<Team>>(`/teams`, {
-      id: teamId.toString(),
-    });
-    return data.response[0];
-  },
-
-  // Get players by team
-  getPlayers: async (teamId: number, season: number = 2024) => {
-    const data = await request<ApiResponse<Player>>(`/players`, {
-      team: teamId.toString(),
-      season: season.toString(),
-    });
-    return data.response;
-  },
-
-  // Get player by ID
-  getPlayer: async (playerId: number, season: number = 2024) => {
-    const data = await request<ApiResponse<Player>>(`/players`, {
-      id: playerId.toString(),
-      season: season.toString(),
-    });
-    return data.response[0];
-  },
-
-  // Search player by name
-  searchPlayer: async (name: string) => {
-    const data = await request<ApiResponse<Player>>(`/players`, {
-      search: name,
-    });
-    return data.response;
-  },
-
-  // Get countries
   getCountries: async () => {
-    const data = await request<ApiResponse<any>>(`/countries`);
-    return data.response;
+    const data = await request<RapidResponse<{ countries: RapidCountry[] }>>(
+      "/football-get-all-countries",
+    );
+    return data.response.countries ?? [];
   },
 
-  // Get leagues
   getLeagues: async () => {
-    const data = await request<ApiResponse<League>>(`/leagues`);
-    return data.response;
+    return loadLeagueCatalog();
   },
 
-  // Get league by ID
   getLeague: async (leagueCode: LeagueCode) => {
     const leagueId = LEAGUE_IDS[leagueCode];
-    const data = await request<ApiResponse<League>>(`/leagues`, {
-      id: leagueId.toString(),
-    });
-    return data.response[0];
+    const catalog = await loadLeagueCatalog();
+    const league = catalog.find((item) => item.league.id === leagueId);
+
+    if (!league) {
+      throw new Error(`League not found for code: ${leagueCode}`);
+    }
+
+    return league;
   },
 
-  // Get top scorers for a league
-  getTopScorers: async (leagueCode: LeagueCode, season: number = 2024) => {
-    const leagueId = LEAGUE_IDS[leagueCode];
-    const data = await request<ApiResponse<Player>>(`/players/topscorers`, {
-      league: leagueId.toString(),
-      season: season.toString(),
-    });
-    return data.response;
+  getTeams: async (leagueCode: LeagueCode) => {
+    return getTeamsByLeagueId(LEAGUE_IDS[leagueCode]);
   },
 
-  // Get top assists for a league
-  getTopAssists: async (leagueCode: LeagueCode, season: number = 2024) => {
-    const leagueId = LEAGUE_IDS[leagueCode];
-    const data = await request<ApiResponse<Player>>(`/players/topassists`, {
-      league: leagueId.toString(),
-      season: season.toString(),
-    });
-    return data.response;
+  getTeamsById: async (leagueId: number) => {
+    return getTeamsByLeagueId(leagueId);
   },
+
+  getTeam: async (teamId: number) => {
+    const logo = await getTeamLogo(teamId);
+    return {
+      team: {
+        id: teamId,
+        name: `Team ${teamId}`,
+        code: String(teamId).slice(0, 3).toUpperCase(),
+        country: "",
+        founded: 0,
+        national: false,
+        logo,
+      },
+      venue: {
+        id: 0,
+        name: "",
+        city: "",
+        capacity: 0,
+        image: "",
+        address: "",
+        surface: "",
+      },
+    } satisfies ClubTeam;
+  },
+
+  getPlayers: async () => {
+    throw new Error("Player sync is not available for this RapidAPI football provider.");
+  },
+
+  getPlayer: async () => {
+    throw new Error("Player sync is not available for this RapidAPI football provider.");
+  },
+
+  searchPlayer: async () => {
+    throw new Error("Player sync is not available for this RapidAPI football provider.");
+  },
+
+  getTopScorers: async () => {
+    throw new Error("Top scorer sync is not available for this RapidAPI football provider.");
+  },
+
+  getTopAssists: async () => {
+    throw new Error("Top assist sync is not available for this RapidAPI football provider.");
+  },
+
+  getFixturesByDate: async (date: string | Date) => {
+    const data = await request<RapidResponse<{ matches: FixtureMatch[] }>>(
+      "/football-get-matches-by-date",
+      {
+        date: toApiDate(date),
+      },
+    );
+    return data.response.matches ?? [];
+  },
+
+  getFixturesByLeagueId,
+
+  getTeamLogo,
 };

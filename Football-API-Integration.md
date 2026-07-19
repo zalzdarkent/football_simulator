@@ -1,15 +1,14 @@
 # Football API Integration
 
-This project now supports real football data from [API-Football](https://www.api-football.com/).
+This project now supports real football data from RapidAPI's live football data provider.
 
 ## Setup
 
 ### 1. Get API Key
 
-1. Go to [API-Football](https://www.api-football.com/)
-2. Sign up for a free account
-3. Get your API key from the dashboard
-4. Free tier includes 100 requests/day
+1. Open your RapidAPI dashboard
+2. Subscribe to the `free-api-live-football-data` provider
+3. Copy your RapidAPI key
 
 ### 2. Configure Environment
 
@@ -20,7 +19,8 @@ cp .env.example .env
 
 2. Add your API key to `.env`:
 ```
-VITE_FOOTBALL_API_KEY=your_actual_api_key_here
+RAPIDAPI_FOOTBALL_KEY=your_actual_api_key_here
+VITE_RAPIDAPI_FOOTBALL_KEY=your_actual_api_key_here
 ```
 
 ### 3. Fetch Real Data
@@ -32,16 +32,16 @@ bun scripts/fetch-football-data.ts
 ```
 
 This will fetch:
-- Teams from all supported leagues
-- Player data for each team
-- League information
-- Top scorers
+- Countries
+- Leagues
+- Teams built from fixtures
+- Fixtures by date and league
 
 The data will be saved to `src/data/` as JSON files:
-- `teams-raw.json` - Raw team data
-- `players-raw.json` - Raw player data  
+- `countries-raw.json` - Raw country data
 - `leagues-raw.json` - Raw league data
-- `top-scorers-raw.json` - Top scorers data
+- `teams-raw.json` - Raw team data
+- `fixtures-raw.json` - Raw fixture data
 
 ## Supported Leagues
 
@@ -56,6 +56,10 @@ The data will be saved to `src/data/` as JSON files:
 - MLS (USA)
 - Saudi Pro League (Saudi Arabia)
 
+## Fixtures Calendar
+
+The app now includes a fixtures calendar under the dashboard route. It reads from the local `fixtures` cache table and refreshes from RapidAPI when a date is missing or explicitly refreshed.
+
 ## API Service
 
 The API service is located at `src/lib/football-api.ts` and includes:
@@ -69,26 +73,17 @@ footballApi.getTeams(leagueCode, season)
 // Get team by ID
 footballApi.getTeam(teamId)
 
-// Get players by team
-footballApi.getPlayers(teamId, season)
-
-// Get player by ID
-footballApi.getPlayer(playerId, season)
-
-// Search player by name
-footballApi.searchPlayer(name)
-
 // Get leagues
 footballApi.getLeagues()
 
 // Get league by code
 footballApi.getLeague(leagueCode)
 
-// Get top scorers
-footballApi.getTopScorers(leagueCode, season)
+// Get fixtures by date
+footballApi.getFixturesByDate(date)
 
-// Get top assists
-footballApi.getTopAssists(leagueCode, season)
+// Get fixtures for a league
+footballApi.getFixturesByLeagueId(leagueId)
 ```
 
 ### Helper Functions
@@ -96,18 +91,11 @@ footballApi.getTopAssists(leagueCode, season)
 ```typescript
 // Convert API team data to app's Club format
 convertApiTeamToClub(apiTeam, leagueCode)
-
-// Convert API player data to app's Player format
-convertApiPlayerToAppPlayer(apiPlayer)
 ```
 
 ## Rate Limits
 
-The free tier of API-Football has:
-- 100 requests per day
-- 10 requests per minute
-
-The fetching script includes delays to respect these limits. If you need more requests, consider upgrading to a paid plan.
+Rate limits depend on your RapidAPI plan. The fetch scripts include small delays and the app caches fixtures in PostgreSQL to reduce repeated requests.
 
 ## Data Structure
 
@@ -129,35 +117,34 @@ The fetching script includes delays to respect these limits. If you need more re
 }
 ```
 
-### Player Data
+### Fixture Data
 ```typescript
 {
-  id: string;
-  name: string;
-  firstname: string;
-  lastname: string;
-  age: number;
-  nationality: string;
-  photo: string;
-  height: string;
-  weight: string;
-  injured: boolean;
-  teamId: string;
-  teamName: string;
-  statistics: PlayerStatistics[];
+  id: number;
+  leagueId: number;
+  matchDate: string;
+  kickoffAt: string;
+  homeTeamId: number;
+  homeTeamName: string;
+  awayTeamId: number;
+  awayTeamName: string;
+  homeScore: number;
+  awayScore: number;
+  statusId: number;
+  statusText: string | null;
 }
 ```
 
 ## Integration with Existing Data
 
-The existing data files (`src/data/clubs.ts`, `src/data/countries.ts`, `src/data/awards.ts`) can be updated to use the real API data. The helper functions in `football-api.ts` can convert API responses to match your existing data structure.
+The local database keeps the game state schema intact. Countries, leagues, clubs, competitions, and fixtures are synchronized into PostgreSQL and reused by the app through the API layer.
 
 ## Troubleshooting
 
 ### API Key Not Working
 - Verify your API key is correct in `.env`
-- Check if your API key is active on the API-Football dashboard
-- Ensure you haven't exceeded your daily request limit
+- Check if your RapidAPI subscription is active for the football provider
+- Ensure the `x-api-host` and `x-api-key` values match your RapidAPI setup
 
 ### Rate Limit Errors
 - Wait before making more requests
@@ -165,6 +152,6 @@ The existing data files (`src/data/clubs.ts`, `src/data/countries.ts`, `src/data
 - Reduce the number of teams/leagues you're fetching
 
 ### Empty Data
-- Check the API service status at [API-Football Status](https://www.api-football.com/)
-- Verify the league codes and season numbers are correct
+- Check the RapidAPI provider status in your dashboard
+- Verify the league IDs and date format are correct
 - Check the console for detailed error messages

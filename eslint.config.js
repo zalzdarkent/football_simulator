@@ -36,5 +36,12 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  // 1. Pindahkan plugin ke dalam sini
   eslintPluginPrettier,
-);
+  // 2. Pindahkan custom rules ke dalam sini (sebelum tutup kurung fungsi config)
+  {
+    rules: {
+      "prettier/prettier": ["error", { endOfLine: "auto" }],
+    },
+  }
+); // <-- Tutup kurung tseslint.config sekarang ada di paling bawah

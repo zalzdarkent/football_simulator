@@ -1,6 +1,6 @@
 # 🔄 Sync Scripts Guide
 
-All sync scripts now support **resume functionality** to avoid starting from scratch each time and save API requests.
+The sync scripts now use RapidAPI football data and preserve resume behavior where it matters.
 
 ## 📋 Available Commands
 
@@ -28,16 +28,11 @@ pnpm run sync:awards           # Skip existing awards
 pnpm run sync:awards:force     # Re-sync all awards
 ```
 
-### Players Sync
+### Fixtures Cache
 ```bash
-# Basic usage
-pnpm run sync:players                                    # Sync all leagues (careful - many API requests!)
-pnpm run sync:players -- --league=epl                   # Sync only EPL
-
-# Resume functionality 
-pnpm run sync:players -- --league=epl --threshold=15    # Skip clubs with 15+ players
-pnpm run sync:players -- --league=epl --threshold=20    # Skip clubs with 20+ players  
-pnpm run sync:players -- --league=epl --force           # Sync all clubs (ignore existing)
+# Example server endpoint usage
+GET /api/fixtures?date=2026-07-19
+GET /api/fixtures?date=2026-07-19&league=47
 ```
 
 ## 🎯 Resume Logic
@@ -50,10 +45,9 @@ pnpm run sync:players -- --league=epl --force           # Sync all clubs (ignore
 - **Default**: Skip leagues with 15+ clubs, skip individual existing clubs
 - **--force**: Re-sync all clubs in all leagues
 
-### Players
-- **Default**: Skip clubs with 15+ players (configurable with --threshold)
-- **--force**: Sync all clubs regardless of player count
-- **--threshold=N**: Set minimum player count to consider club "synced"
+### Fixtures
+- **Default**: Read from the local `fixtures` cache table
+- **Refresh**: Re-fetch the selected date from RapidAPI when the cache is empty or when you request a refresh
 
 ## 🚀 Recommended Workflow
 
@@ -65,32 +59,22 @@ pnpm run sync:players -- --league=epl --force           # Sync all clubs (ignore
    pnpm run sync:awards
    ```
 
-2. **Sync players (API intensive):**
+2. **Sync clubs:**
    ```bash
-   # Sync one league at a time to manage API limits
-   pnpm run sync:players -- --league=epl
-   pnpm run sync:players -- --league=laliga
-   # ... etc
+   pnpm run sync:clubs
+   pnpm run sync:clubs:force
    ```
 
-3. **Resume interrupted sync:**
-   ```bash
-   # If players sync was interrupted, just run again - it will skip completed clubs
-   pnpm run sync:players -- --league=epl
-   ```
-
-4. **Force complete re-sync:**
+3. **Force complete re-sync:**
    ```bash
    pnpm run sync:clubs:force
-   pnpm run sync:players -- --league=epl --force
    ```
 
 ## ⚠️ API Rate Limits
 
-- **Free Tier**: 100 requests/day  
-- **Players sync**: ~3-4 requests per club (depends on squad size)
-- **Clubs sync**: ~1 request per league
-- **Resume functionality** helps you continue where you left off when hitting limits
+- **RapidAPI limits** depend on your subscription
+- **Clubs sync** uses fixtures to reconstruct teams
+- **Fixtures cache** avoids repeated requests for the same date
 
 ## 📊 Monitoring Progress
 

@@ -1,21 +1,70 @@
 import { query } from "./db.js";
-import { footballApi } from "./football-api.js";
-import { AWARDS } from "../../src/data/awards.ts"; // Use .ts for tsx
+import { footballApi, LEAGUE_IDS, API_ONLY_LEAGUE_IDS } from "./football-api.js";
+import { LEAGUES, CLUBS } from "./data/clubs.js";
+import { FALLBACK_CLUBS } from "./data/fallback-clubs.js";
 
-// Mapping of target countries requested by the user
-const TARGET_COUNTRIES = {
-  // Europe Top 10
-  "England": "EN", "Spain": "ES", "Italy": "IT", "Germany": "DE", "France": "FR",
-  "Netherlands": "NL", "Portugal": "PT", "Turkey": "TR", "Belgium": "BE", "Scotland": "SC",
-  // Asia Top 5 + Indonesia + Australia
-  "Saudi Arabia": "SA", "Japan": "JP", "South-Korea": "KR", "Australia": "AU", "Indonesia": "ID",
-  // Americas Top 5
-  "Brazil": "BR", "Argentina": "AR", "USA": "US", "Mexico": "MX", "Colombia": "CO",
-  // Africa Top 3
-  "Egypt": "EG", "Morocco": "MA", "South Africa": "ZA"
-};
+function getDbLeagueId(apiLeagueId: number): string {
+  const foundEntry = Object.entries(LEAGUE_IDS).find(([_, id]) => id === apiLeagueId);
+  return foundEntry ? foundEntry[0] : apiLeagueId.toString();
+}
 
-// Calculate tier based on country/league reputation roughly
+const TARGET_COUNTRIES = [
+  { name: "England", code: "EN", flagCode: "gb", aliases: ["England"] },
+  { name: "Spain", code: "ES", flagCode: "es", aliases: ["Spain"] },
+  { name: "Italy", code: "IT", flagCode: "it", aliases: ["Italy"] },
+  { name: "Germany", code: "DE", flagCode: "de", aliases: ["Germany"] },
+  { name: "France", code: "FR", flagCode: "fr", aliases: ["France"] },
+  { name: "Netherlands", code: "NL", flagCode: "nl", aliases: ["Netherlands"] },
+  { name: "Portugal", code: "PT", flagCode: "pt", aliases: ["Portugal"] },
+  { name: "Turkey", code: "TR", flagCode: "tr", aliases: ["Turkey", "Turkiye"] },
+  { name: "Belgium", code: "BE", flagCode: "be", aliases: ["Belgium"] },
+  { name: "Scotland", code: "SC", flagCode: "gb", aliases: ["Scotland"] },
+  { name: "Saudi Arabia", code: "SA", flagCode: "sa", aliases: ["Saudi Arabia"] },
+  { name: "Japan", code: "JP", flagCode: "jp", aliases: ["Japan"] },
+  { name: "South-Korea", code: "KR", flagCode: "kr", aliases: ["South-Korea", "South Korea"] },
+  { name: "Australia", code: "AU", flagCode: "au", aliases: ["Australia"] },
+  { name: "Indonesia", code: "ID", flagCode: "id", aliases: ["Indonesia"] },
+  { name: "Brazil", code: "BR", flagCode: "br", aliases: ["Brazil"] },
+  { name: "Argentina", code: "AR", flagCode: "ar", aliases: ["Argentina"] },
+  { name: "USA", code: "US", flagCode: "us", aliases: ["USA", "United States"] },
+  { name: "Mexico", code: "MX", flagCode: "mx", aliases: ["Mexico"] },
+  { name: "Colombia", code: "CO", flagCode: "co", aliases: ["Colombia"] },
+  { name: "Egypt", code: "EG", flagCode: "eg", aliases: ["Egypt"] },
+  { name: "Morocco", code: "MA", flagCode: "ma", aliases: ["Morocco"] },
+  { name: "South Africa", code: "ZA", flagCode: "za", aliases: ["South Africa"] },
+] as const;
+
+type TargetCountry = (typeof TARGET_COUNTRIES)[number];
+
+const CONTINENTAL_COMPETITIONS = [
+  { id: "ucl", name: "Champions League", short: "UCL" },
+  { id: "uel", name: "Europa League", short: "UEL" },
+  { id: "uecl", name: "Conference League", short: "UECL" },
+];
+
+const AWARDS = [
+  { id: "golden-boot", name: "Golden Boot", scope: "season", icon: "🥇" },
+  { id: "golden-glove", name: "Golden Glove", scope: "season", icon: "🧤" },
+  { id: "tots", name: "Team of the Season", scope: "season", icon: "⭐" },
+  { id: "poty-league", name: "Player of the Year", scope: "league", icon: "🏅" },
+  { id: "best-young", name: "Best Young Player", scope: "season", icon: "🌱" },
+  { id: "ballon-dor", name: "Ballon d'Or", scope: "global", icon: "🏆" },
+  { id: "fifa-best", name: "The Best", scope: "global", icon: "🎖️" },
+  { id: "uefa-poty", name: "UEFA POTY", scope: "continental", icon: "⚽" },
+  { id: "ucl-poty", name: "UCL POTY", scope: "continental", icon: "✨" },
+];
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+function buildFlagUrl(flagCode: string) {
+  return `https://flagcdn.com/w40/${flagCode}.png`;
+}
+
 function calculateTier(countryName: string): 1 | 2 | 3 | 4 {
   const elite = ["England", "Spain", "Italy", "Germany", "France"];
   const strong = ["Netherlands", "Portugal", "Brazil", "Argentina"];
@@ -24,291 +73,571 @@ function calculateTier(countryName: string): 1 | 2 | 3 | 4 {
   return 3;
 }
 
-// Generate colors based on club name (fallback)
-function generateColors(): [string, string] {
-  return ["#000000", "#FFFFFF"];
+function shortName(name: string) {
+  return normalize(name).slice(0, 8).toUpperCase();
 }
 
-async function syncCountries(forceSync: boolean = false) {
-  console.log("🔄 Syncing countries from API...");
-  
-  // Check existing countries if not force sync
+function matchesCountryAlias(apiName: string, targetCountry: TargetCountry) {
+  const normalizedApiName = normalize(apiName);
+  return (
+    targetCountry.aliases.some((alias) => normalize(alias) === normalizedApiName) ||
+    normalize(targetCountry.name) === normalizedApiName
+  );
+}
+
+function findTargetCountry(dbCountryName: string, dbCountryCode: string) {
+  const normalizedCountryName = normalize(dbCountryName);
+  const normalizedCountryCode = normalize(dbCountryCode);
+
+  return (
+    TARGET_COUNTRIES.find((country) => {
+      const normalizedTargetName = normalize(country.name);
+      if (normalizedTargetName === normalizedCountryName) return true;
+      if (normalize(country.code) === normalizedCountryCode) return true;
+      return country.aliases.some((alias) => normalize(alias) === normalizedCountryName);
+    }) ?? null
+  );
+}
+
+function findLeagueForCountry(
+  catalog: Awaited<ReturnType<typeof footballApi.getLeagues>>,
+  targetCountry: TargetCountry,
+) {
+  const matches = catalog.filter(
+    (item) =>
+      matchesCountryAlias(item.country.name, targetCountry) ||
+      normalize(item.country.code) === normalize(targetCountry.code),
+  );
+
+  if (matches.length === 0) return null;
+
+  const scoreLeague = (name: string): number => {
+    const n = name.toLowerCase();
+    let score = 0;
+
+    // League keywords (+10 points)
+    const leagueKeywords = [
+      "league", "liga", "division", "serie", "bundesliga", "eredivisie",
+      "premiership", "primera", "pro", "championship", "a-league",
+      "j. league", "k league", "mls", "botola"
+    ];
+    if (leagueKeywords.some((kw) => n.includes(kw))) {
+      score += 10;
+    }
+
+    // Cup/tournament keywords (-20 points)
+    const cupKeywords = [
+      "cup", "copa", "piala", "trophy", "shield", "supercup",
+      "super cup", "play-off", "playoff", "friendlies",
+      "championship play-offs", "relegation", "qualification", "cupa"
+    ];
+    if (cupKeywords.some((kw) => n.includes(kw))) {
+      score -= 20;
+    }
+
+    return score;
+  };
+
+  // Sort matches by score descending
+  matches.sort((a, b) => scoreLeague(b.league.name) - scoreLeague(a.league.name));
+
+  return matches[0] ?? null;
+}
+
+function findCountryByApiName(apiName: string) {
+  const normalizedName = normalize(apiName);
+  return TARGET_COUNTRIES.find((country) =>
+    country.aliases.some((alias) => normalize(alias) === normalizedName),
+  );
+}
+
+async function syncCountries(forceSync = false) {
+  console.log("🔄 Syncing countries from RapidAPI...");
+
   let existingCountries = new Set<string>();
   if (!forceSync) {
     const { rows } = await query("SELECT code FROM countries");
-    existingCountries = new Set(rows.map(r => r.code));
+    existingCountries = new Set(rows.map((row) => row.code));
     console.log(`📋 Found ${existingCountries.size} existing countries in DB`);
   }
-  
+
   try {
     const countries = await footballApi.getCountries();
-    console.log(`Found ${countries.length} countries in API.`);
-    
-    const targetCountries = Object.entries(TARGET_COUNTRIES);
-    const countriesToSync = targetCountries.filter(([name, code]) => 
-      forceSync || !existingCountries.has(code)
+    const countriesToSync = TARGET_COUNTRIES.filter(
+      (country) => forceSync || !existingCountries.has(country.code),
     );
-    
+
     if (countriesToSync.length === 0) {
-      console.log(`✅ All ${targetCountries.length} target countries already synced!`);
+      console.log(`✅ All ${TARGET_COUNTRIES.length} target countries already synced!`);
       return;
     }
-    
-    console.log(`🔄 Need to sync: ${countriesToSync.length}/${targetCountries.length} countries`);
-    console.log(`📝 Countries to sync: ${countriesToSync.map(([name]) => name).join(', ')}`);
-    
+
+    console.log(`🔄 Need to sync: ${countriesToSync.length}/${TARGET_COUNTRIES.length} countries`);
+    console.log(
+      `📝 Countries to sync: ${countriesToSync.map((country) => country.name).join(", ")}`,
+    );
+
     let count = 0;
-    for (const c of countries) {
-      if (TARGET_COUNTRIES[c.name as keyof typeof TARGET_COUNTRIES]) {
-        const codeToInsert = TARGET_COUNTRIES[c.name as keyof typeof TARGET_COUNTRIES];
-        
-        if (forceSync || !existingCountries.has(codeToInsert)) {
-          console.log(`Inserting: name=${c.name}, code=${codeToInsert}, flag=${c.flag}`);
-          await query(
-            "INSERT INTO countries (code, name, flag) VALUES ($1, $2, $3) ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, flag = EXCLUDED.flag",
-            [codeToInsert, c.name, c.flag || ""]
-          );
-          count++;
-        }
-      }
+    for (const countryConfig of countriesToSync) {
+      const apiCountry = countries.find(
+        (item) => findCountryByApiName(item.name)?.name === countryConfig.name,
+      );
+      if (!apiCountry) continue;
+
+      await query(
+        `INSERT INTO countries (code, name, flag)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, flag = EXCLUDED.flag`,
+        [countryConfig.code, countryConfig.name, buildFlagUrl(countryConfig.flagCode)],
+      );
+      count++;
+      console.log(`  ✅ Country: ${countryConfig.name}`);
     }
+
     console.log(`✅ Synced ${count} countries.`);
   } catch (error) {
     console.error("❌ Error syncing countries:", error);
   }
 }
 
-async function syncLeagues(forceSync: boolean = false) {
-  console.log("🔄 Syncing leagues and domestic cups from API...");
-  
-  // Check existing leagues if not force sync
+async function syncLeagues(forceSync = false) {
+  console.log("🔄 Syncing leagues and competitions from RapidAPI...");
+
+  // Cleanup duplicate numeric leagues and their competitions
+  const legacyNumericIds = ["47", "87", "55", "54", "53", "57", "61", "71", "130", "536"];
+  try {
+    await query("DELETE FROM competitions WHERE league_id = ANY($1) OR id = ANY($1)", [legacyNumericIds]);
+    await query("DELETE FROM leagues WHERE id = ANY($1)", [legacyNumericIds]);
+    console.log("🧹 Cleaned up legacy duplicate numeric leagues/competitions.");
+  } catch (err) {
+    console.warn("⚠️ Warning during legacy cleanup:", err);
+  }
+
   let existingLeagues = new Set<string>();
   let existingCompetitions = new Set<string>();
   if (!forceSync) {
     const { rows: leagues } = await query("SELECT id FROM leagues");
     const { rows: competitions } = await query("SELECT id FROM competitions");
-    existingLeagues = new Set(leagues.map(r => r.id));
-    existingCompetitions = new Set(competitions.map(r => r.id));
-    console.log(`📋 Found ${existingLeagues.size} existing leagues, ${existingCompetitions.size} existing competitions in DB`);
+    existingLeagues = new Set(leagues.map((row) => row.id));
+    existingCompetitions = new Set(competitions.map((row) => row.id));
+    console.log(
+      `📋 Found ${existingLeagues.size} existing leagues, ${existingCompetitions.size} existing competitions in DB`,
+    );
   }
-  
+
   try {
-    const allLeagues = await footballApi.getLeagues();
-    console.log(`Found ${allLeagues.length} leagues/cups in API.`);
+    const { rows: countries } = await query<{ code: string; name: string }>(
+      "SELECT code, name FROM countries ORDER BY name",
+    );
+    const catalog = await footballApi.getLeagues();
 
-    const TARGET_LEAGUE_IDS = [
-      39, 140, 135, 78, 61, 88, 94, 203, 144, 179, // Europe Top 10
-      307, 98, 292, 188, 274, // Asia + Aus
-      71, 128, 253, 262, 239, // Americas Top 5
-      233, 200, 288 // Africa Top 3
-    ];
-
-    const targetCountryNames = Object.keys(TARGET_COUNTRIES);
     let leagueCount = 0;
     let cupCount = 0;
-    let skippedLeagues = 0;
-    let skippedCups = 0;
-    const syncedCupsForCountry = new Set<string>();
+    let skippedCountries = 0;
+    // Pre-populate with simulator league IDs so they're never pruned
+    const syncedLeagueIds = new Set<string>(LEAGUES.map((l) => l.id));
 
-    for (const item of allLeagues) {
-      const countryName = item.country.name;
-      if (!targetCountryNames.includes(countryName)) continue;
-      
-      const countryCode = TARGET_COUNTRIES[countryName as keyof typeof TARGET_COUNTRIES];
-      const leagueIdStr = item.league.id.toString();
-      
-      if (item.league.type === "League" && TARGET_LEAGUE_IDS.includes(item.league.id)) {
-        if (!forceSync && existingLeagues.has(leagueIdStr) && existingCompetitions.has(leagueIdStr)) {
-          skippedLeagues++;
-          continue;
-        }
-        
-        const shortName = item.league.name.substring(0, 8).toUpperCase();
-        
+    for (const country of countries) {
+      const targetCountry = findTargetCountry(country.name, country.code);
+      if (!targetCountry) {
+        skippedCountries++;
+        console.log(`  ⏭️  Skipping unsupported country in RapidAPI mapping: ${country.name}`);
+        continue;
+      }
+
+      const league = findLeagueForCountry(catalog, targetCountry);
+      if (!league) {
+        skippedCountries++;
+        console.log(`  ⏭️  No league found in RapidAPI catalog for ${country.name}`);
+        continue;
+      }
+
+      const apiLeagueId = league.league.id;
+      const leagueId = getDbLeagueId(apiLeagueId);
+      const countryCode = country.code;
+      syncedLeagueIds.add(leagueId);
+
+      if (forceSync || !existingLeagues.has(leagueId)) {
         await query(
-          "INSERT INTO leagues (id, name, country, short, country_code) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, country = EXCLUDED.country",
-          [leagueIdStr, item.league.name, countryName, shortName, countryCode]
+          `INSERT INTO leagues (id, name, country, short, country_code)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, country = EXCLUDED.country, short = EXCLUDED.short, country_code = EXCLUDED.country_code`,
+          [leagueId, league.league.name, country.name, shortName(league.league.name), countryCode],
         );
-        
+      }
+
+      if (forceSync || !existingCompetitions.has(leagueId)) {
         await query(
           `INSERT INTO competitions (id, name, short, scope, league_id, format, teams_count)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-          [leagueIdStr, item.league.name, shortName, "domestic-league", leagueIdStr, "league", 20]
+           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, short = EXCLUDED.short, scope = EXCLUDED.scope, league_id = EXCLUDED.league_id, format = EXCLUDED.format, teams_count = EXCLUDED.teams_count`,
+          [
+            leagueId,
+            league.league.name,
+            shortName(league.league.name),
+            "domestic-league",
+            leagueId,
+            "league",
+            20,
+          ],
         );
-        leagueCount++;
-        console.log(`  ✅ League: ${item.league.name} (${countryName})`);
       }
-      
-      if (item.league.type === "Cup" && !syncedCupsForCountry.has(countryName)) {
-        if (!forceSync && existingCompetitions.has(leagueIdStr)) {
-          skippedCups++;
-          syncedCupsForCountry.add(countryName); // Mark as processed to avoid checking again
-          continue;
-        }
-        
-        const shortName = item.league.name.substring(0, 8).toUpperCase();
-        const { rows } = await query("SELECT id FROM leagues WHERE country = $1 LIMIT 1", [countryName]);
-        const leagueId = rows.length > 0 ? rows[0].id : null;
 
-        if (leagueId) {
-          let cupName = item.league.name;
-          if (countryName === "Indonesia") cupName = "Loka Bhinneka";
+      const cupId = `${leagueId}-cup`;
+      if (forceSync || !existingCompetitions.has(cupId)) {
+        await query(
+          `INSERT INTO competitions (id, name, short, scope, league_id, format, teams_count)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, short = EXCLUDED.short, scope = EXCLUDED.scope, league_id = EXCLUDED.league_id, format = EXCLUDED.format, teams_count = EXCLUDED.teams_count`,
+          [cupId, `${country.name} Cup`, "CUP", "domestic-cup", leagueId, "knockout", 32],
+        );
+        cupCount++;
+      }
 
-          await query(
-            `INSERT INTO competitions (id, name, short, scope, league_id, format, teams_count)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
-            [leagueIdStr, cupName, shortName, "domestic-cup", leagueId, "knockout", 32]
-          );
-          cupCount++;
-          syncedCupsForCountry.add(countryName);
-          console.log(`  ✅ Cup: ${cupName} (${countryName})`);
-        }
+      leagueCount++;
+      console.log(`  ✅ League: ${league.league.name} (${country.name}) -> ID: ${leagueId}`);
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+
+    // Prune old leagues & competitions that are no longer synced (except continental cups)
+    // Only prune if we successfully got enough leagues from the API (safety guard)
+    const allSyncedIds = Array.from(syncedLeagueIds);
+    const minLeaguesForPrune = Math.floor(TARGET_COUNTRIES.length * 0.6); // Need at least 60% success rate
+    if (leagueCount >= minLeaguesForPrune && allSyncedIds.length > 0) {
+      try {
+        await query(
+          `DELETE FROM competitions WHERE league_id IS NOT NULL AND league_id NOT IN (${allSyncedIds.map((_, i) => `$${i + 1}`).join(", ")})`,
+          allSyncedIds,
+        );
+        await query(
+          `DELETE FROM leagues WHERE id NOT IN (${allSyncedIds.map((_, i) => `$${i + 1}`).join(", ")})`,
+          allSyncedIds,
+        );
+        console.log("🧹 Pruned outdated/removed leagues and competitions from DB.");
+      } catch (err) {
+        console.warn("⚠️ Warning during pruning:", err);
+      }
+    } else if (leagueCount < minLeaguesForPrune) {
+      console.log(`⚠️  Skipping prune — only ${leagueCount}/${TARGET_COUNTRIES.length} leagues synced (API may be rate-limited).`);
+    }
+
+    for (const competition of CONTINENTAL_COMPETITIONS) {
+      if (forceSync || !existingCompetitions.has(competition.id)) {
+        await query(
+          `INSERT INTO competitions (id, name, short, scope, league_id, format, teams_count, region)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, short = EXCLUDED.short, scope = EXCLUDED.scope, format = EXCLUDED.format, teams_count = EXCLUDED.teams_count, region = EXCLUDED.region`,
+          [
+            competition.id,
+            competition.name,
+            competition.short,
+            "continental",
+            null,
+            "league",
+            32,
+            "Europe",
+          ],
+        );
       }
     }
-    
+
     console.log(`✅ Synced ${leagueCount} leagues and ${cupCount} cups.`);
-    if (skippedLeagues > 0 || skippedCups > 0) {
-      console.log(`⏭️  Skipped ${skippedLeagues} existing leagues and ${skippedCups} existing cups.`);
+    if (skippedCountries > 0) {
+      console.log(`⏭️  Skipped ${skippedCountries} countries that RapidAPI could not map.`);
     }
   } catch (error) {
     console.error("❌ Error syncing leagues:", error);
   }
 }
 
-async function syncClubs(forceSync: boolean = false) {
-  console.log("🔄 Syncing clubs for all our synced leagues...");
-  
-  // Get existing clubs if not force sync
+async function syncClubs(forceSync = false) {
+  console.log("🔄 Syncing clubs for all synced leagues...");
+
   let existingClubs = new Set<string>();
   if (!forceSync) {
-    const { rows } = await query("SELECT id FROM clubs WHERE api_id IS NOT NULL");
-    existingClubs = new Set(rows.map(r => r.id));
+    const { rows } = await query("SELECT id FROM clubs");
+    existingClubs = new Set(rows.map((row) => row.id));
     console.log(`📋 Found ${existingClubs.size} existing clubs in DB`);
   }
-  
+
   try {
-    const { rows: leagues } = await query("SELECT id, country FROM leagues");
-    console.log(`Found ${leagues.length} leagues in local DB.`);
+    // Delete non-simulator clubs if force syncing.
+    // Simulator clubs are in CLUBS from ./data/clubs.ts.
+    const simulatorClubIds = CLUBS.map((c) => c.id);
+    if (forceSync) {
+      console.log("🗑️  Force sync: deleting all non-simulator clubs...");
+      await query(
+        `DELETE FROM clubs WHERE id NOT IN (${simulatorClubIds.map((_, i) => `$${i + 1}`).join(", ")})`,
+        simulatorClubIds
+      );
+    }
+
+    // Step 1: Ensure leagues and competitions structure for simulator data is updated
+    for (const league of LEAGUES) {
+      await query(
+        `INSERT INTO leagues (id, name, country, short, country_code)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, country = EXCLUDED.country, short = EXCLUDED.short, country_code = EXCLUDED.country_code`,
+        [league.id, league.name, league.country, league.short, league.countryCode],
+      );
+
+      const clubsInLeague = CLUBS.filter((club) => club.league === league.id);
+      await query(
+        `INSERT INTO competitions (id, name, short, scope, league_id, format, teams_count)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, short = EXCLUDED.short, scope = EXCLUDED.scope, league_id = EXCLUDED.league_id, format = EXCLUDED.format, teams_count = EXCLUDED.teams_count`,
+        [
+          league.id,
+          league.name,
+          league.short,
+          "domestic-league",
+          league.id,
+          "league",
+          clubsInLeague.length,
+        ],
+      );
+
+      await query(
+        `INSERT INTO competitions (id, name, short, scope, league_id, format, teams_count)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, short = EXCLUDED.short, scope = EXCLUDED.scope, league_id = EXCLUDED.league_id, format = EXCLUDED.format, teams_count = EXCLUDED.teams_count`,
+        [
+          `${league.id}-cup`,
+          `${league.name} Cup`,
+          "CUP",
+          "domestic-cup",
+          league.id,
+          "knockout",
+          32,
+        ],
+      );
+    }
+
+    // Step 2: Fetch all leagues that currently exist in the database
+    const { rows: dbLeagues } = await query<{ id: string; name: string; country: string }>(
+      "SELECT id, name, country FROM leagues"
+    );
+
+    // Get counts of clubs currently in the DB for each league to determine if we can skip them
+    const { rows: counts } = await query<{ league_id: string; count: number }>(
+      "SELECT league_id, COUNT(*)::int as count FROM clubs GROUP BY league_id"
+    );
+    const clubsCountByLeague = new Map(counts.map((r) => [r.league_id, r.count]));
 
     let totalClubs = 0;
-    let skippedClubs = 0;
-    
-    for (const lg of leagues) {
-      console.log(`Checking teams for league ${lg.id} (${lg.country})...`);
-      
-      // Check if this league already has clubs
-      if (!forceSync) {
-        const { rows: leagueClubs } = await query(
-          "SELECT COUNT(*)::int as count FROM clubs WHERE league_id = $1 AND api_id IS NOT NULL", 
-          [lg.id]
-        );
-        
-        if (leagueClubs[0].count >= 15) { // Assume 15+ clubs = league fully synced
-          console.log(`  ⏭️  League ${lg.country} already has ${leagueClubs[0].count} clubs, skipping...`);
-          skippedClubs += leagueClubs[0].count;
-          continue;
-        } else if (leagueClubs[0].count > 0) {
-          console.log(`  🔄 League ${lg.country} has ${leagueClubs[0].count} clubs, will add missing ones...`);
+    let skippedLeagues = 0;
+    const TIER_REPUTATIONS: Record<number, number> = { 1: 68, 2: 60, 3: 55, 4: 48 };
+
+    for (const league of dbLeagues) {
+      console.log(`Checking teams for league ${league.id} (${league.name} - ${league.country})...`);
+
+      const isSimulatorLeague = LEAGUES.some((l) => l.id === league.id);
+      const existingCount = clubsCountByLeague.get(league.id) ?? 0;
+
+      // Skip criteria: if not forceSync, and we have enough clubs synced for this league
+      // Simulator leagues have 15+ clubs, other API leagues have 10+ clubs
+      if (!forceSync && existingCount >= (isSimulatorLeague ? 15 : 10)) {
+        console.log(`  ⏭️  ${league.country} already synced with ${existingCount} clubs, skipping...`);
+        skippedLeagues++;
+        totalClubs += existingCount;
+        continue;
+      }
+
+      // Find API League ID - check simulator LEAGUE_IDS first, then API_ONLY_LEAGUE_IDS, then fallback to numeric parse
+      const apiLeagueId = isNaN(Number(league.id))
+        ? LEAGUE_IDS[league.id as keyof typeof LEAGUE_IDS]
+        : (API_ONLY_LEAGUE_IDS[league.id] ?? Number(league.id));
+
+      let apiTeams: any[] = [];
+      if (apiLeagueId) {
+        try {
+          console.log(`  📡 Fetching clubs from API for league ID ${apiLeagueId}...`);
+          apiTeams = await footballApi.getTeamsById(apiLeagueId);
+          console.log(`  📊 Found ${apiTeams.length} clubs from API`);
+        } catch (err) {
+          console.error(`  ❌ Failed to fetch clubs for league ${league.name} from API:`, err);
         }
       }
-      
-      try {
-        console.log(`  🌐 Fetching teams from API for ${lg.country}...`);
-        const data = await footballApi.getTeamsById(Number(lg.id), 2024);
-        const tier = calculateTier(lg.country);
-        let newClubsInLeague = 0;
 
-        for (const teamItem of data) {
-          const t = teamItem.team;
-          const clubId = t.id.toString();
-          
-          if (!forceSync && existingClubs.has(clubId)) {
-            continue; // Skip existing club
-          }
-          
-          const short = t.code || t.name.substring(0, 3).toUpperCase();
-          const colors = generateColors();
+      // If API teams fetch returned nothing (due to rate limits or API issue), fall back to our high-quality static fallback data!
+      if (apiTeams.length === 0) {
+        const fallbacks = FALLBACK_CLUBS[league.id];
+        if (fallbacks) {
+          console.log(`  💡 Falling back to ${fallbacks.length} pre-defined clubs for ${league.name}...`);
+          apiTeams = fallbacks.map((fb, index) => ({
+            team: {
+              id: 900000 + Math.abs(normalize(fb.name).split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) + index, // Deterministic ID
+              name: fb.name,
+              code: fb.short,
+              country: league.country,
+              logo: null,
+            },
+            venue: {
+              city: fb.city,
+            },
+          }));
+        }
+      }
 
+      const clubsForLeague = CLUBS.filter((club) => club.league === league.id);
+      const syncedClubIds = new Set<string>();
+      let syncedCount = 0;
+
+      // Match and insert/update clubs from the API
+      for (const team of apiTeams) {
+        const normName = normalize(team.team.name);
+        const simulatorClub = clubsForLeague.find(
+          (c) => normalize(c.name) === normName || normalize(c.short) === normalize(team.team.code)
+        );
+
+        let clubId: string;
+        let clubName: string;
+        let clubShort: string;
+        let city: string;
+        let tier: number;
+        let reputation: number;
+        let primaryColor: string;
+        let secondaryColor: string;
+
+        if (simulatorClub) {
+          clubId = simulatorClub.id;
+          clubName = simulatorClub.name;
+          clubShort = simulatorClub.short;
+          city = simulatorClub.city;
+          tier = simulatorClub.tier;
+          reputation = simulatorClub.reputation;
+          primaryColor = simulatorClub.colors[0];
+          secondaryColor = simulatorClub.colors[1];
+          syncedClubIds.add(simulatorClub.id);
+        } else {
+          clubId = `api-club-${team.team.id}`;
+          clubName = team.team.name;
+          clubShort = team.team.code;
+          city = team.venue.city || league.country;
+          tier = calculateTier(league.country);
+          reputation = TIER_REPUTATIONS[tier] ?? 50;
+          primaryColor = "#FFFFFF";
+          secondaryColor = "#000000";
+        }
+
+        await query(
+          `INSERT INTO clubs (id, name, short, league_id, city, tier, reputation, color_primary, color_secondary, logo_url, api_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             short = EXCLUDED.short,
+             league_id = EXCLUDED.league_id,
+             city = EXCLUDED.city,
+             tier = EXCLUDED.tier,
+             reputation = EXCLUDED.reputation,
+             color_primary = EXCLUDED.color_primary,
+             color_secondary = EXCLUDED.color_secondary,
+             logo_url = EXCLUDED.logo_url,
+             api_id = EXCLUDED.api_id`,
+          [
+            clubId,
+            clubName,
+            clubShort,
+            league.id,
+            city,
+            tier,
+            reputation,
+            primaryColor,
+            secondaryColor,
+            team.team.logo || null,
+            team.team.id,
+          ],
+        );
+        syncedCount++;
+        totalClubs++;
+      }
+
+      // Insert any remaining simulator clubs that weren't matched in the API response
+      for (const club of clubsForLeague) {
+        if (!syncedClubIds.has(club.id)) {
           await query(
             `INSERT INTO clubs (id, name, short, league_id, city, tier, reputation, color_primary, color_secondary, logo_url, api_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, logo_url = EXCLUDED.logo_url, api_id = EXCLUDED.api_id`,
+             ON CONFLICT (id) DO UPDATE SET
+               name = EXCLUDED.name,
+               short = EXCLUDED.short,
+               league_id = EXCLUDED.league_id,
+               city = EXCLUDED.city,
+               tier = EXCLUDED.tier,
+               reputation = EXCLUDED.reputation,
+               color_primary = EXCLUDED.color_primary,
+               color_secondary = EXCLUDED.color_secondary`,
             [
-              clubId, t.name, short, lg.id, teamItem.venue.city || "Unknown",
-              tier, 70, colors[0], colors[1], t.logo, t.id
-            ]
+              club.id,
+              club.name,
+              club.short,
+              league.id,
+              club.city,
+              club.tier,
+              club.reputation,
+              club.colors[0],
+              club.colors[1],
+              null,
+              null,
+            ],
           );
-          newClubsInLeague++;
+          syncedCount++;
           totalClubs++;
         }
-        
-        console.log(`  ✅ ${lg.country}: ${newClubsInLeague} new clubs synced (${data.length} total in API)`);
-        
-        // Sleep to respect rate limits
-        await new Promise(res => setTimeout(res, 1500));
-      } catch (err) {
-        console.error(`  ❌ Failed to fetch teams for league ${lg.id} (${lg.country}):`, err);
-        
-        // If rate limit error, break to preserve requests
-        if (err instanceof Error && err.message.includes('Rate limit')) {
-          console.log(`  ⏸️  Rate limit reached. Stopping clubs sync.`);
-          break;
-        }
       }
+
+      console.log(`  ✅ ${league.country}: ${syncedCount} clubs synced`);
+      // Add a small delay between leagues to respect rate limits
+      await new Promise((resolve) => setTimeout(resolve, 350));
     }
-    
-    console.log(`✅ Synced ${totalClubs} new clubs.`);
-    if (skippedClubs > 0) {
-      console.log(`⏭️  Skipped ${skippedClubs} existing clubs.`);
+
+    console.log(`✅ Synced ${totalClubs} clubs.`);
+    if (skippedLeagues > 0) {
+      console.log(`⏭️  Skipped ${skippedLeagues} already synced leagues.`);
     }
   } catch (error) {
     console.error("❌ Error syncing clubs:", error);
   }
 }
 
-async function syncAwards(forceSync: boolean = false) {
+async function syncAwards(forceSync = false) {
   console.log("🔄 Syncing local awards...");
-  
-  // Check existing awards if not force sync
+
   let existingAwards = new Set<string>();
   if (!forceSync) {
     const { rows } = await query("SELECT id FROM awards");
-    existingAwards = new Set(rows.map(r => r.id));
+    existingAwards = new Set(rows.map((row) => row.id));
     console.log(`📋 Found ${existingAwards.size} existing awards in DB`);
   }
-  
-  const allAwards = Object.values(AWARDS);
-  const awardsToSync = allAwards.filter(award => 
-    forceSync || !existingAwards.has(award.id)
-  );
-  
+
+  const awardsToSync = AWARDS.filter((award) => forceSync || !existingAwards.has(award.id));
   if (awardsToSync.length === 0) {
-    console.log(`✅ All ${allAwards.length} awards already synced!`);
+    console.log(`✅ All ${AWARDS.length} awards already synced!`);
     return;
   }
-  
-  console.log(`🔄 Need to sync: ${awardsToSync.length}/${allAwards.length} awards`);
-  
+
+  console.log(`🔄 Need to sync: ${awardsToSync.length}/${AWARDS.length} awards`);
+
   let count = 0;
   for (const award of awardsToSync) {
     await query(
-      `INSERT INTO awards (id, name, scope, icon) VALUES ($1, $2, $3, $4)
+      `INSERT INTO awards (id, name, scope, icon)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, scope = EXCLUDED.scope, icon = EXCLUDED.icon`,
-      [award.id, award.name, award.scope, award.icon]
+      [award.id, award.name, award.scope, award.icon],
     );
     count++;
     console.log(`  ✅ Award: ${award.name} (${award.scope})`);
   }
+
   console.log(`✅ Synced ${count} awards.`);
 }
 
 async function main() {
   const args = process.argv.slice(2);
-  const typeFlag = args.find(a => a.startsWith("--type="));
-  const forceFlag = args.find(a => a === "--force");
-  
+  const typeFlag = args.find((arg) => arg.startsWith("--type="));
+  const forceFlag = args.includes("--force");
+
   const type = typeFlag ? typeFlag.split("=")[1] : null;
   const forceSync = !!forceFlag;
 
@@ -320,7 +649,7 @@ async function main() {
   }
 
   console.log(`🚀 Starting ${type} sync...`);
-  console.log(`🔄 Force mode: ${forceSync ? 'ON (sync all)' : 'OFF (skip existing)'}`);
+  console.log(`🔄 Force mode: ${forceSync ? "ON (sync all)" : "OFF (skip existing)"}`);
   console.log();
 
   switch (type) {
@@ -338,8 +667,13 @@ async function main() {
       break;
     default:
       console.error(`Unknown sync type: ${type}`);
+      process.exit(1);
   }
+
   process.exit(0);
 }
 
-main();
+main().catch((error) => {
+  console.error("Fatal sync error:", error);
+  process.exit(1);
+});

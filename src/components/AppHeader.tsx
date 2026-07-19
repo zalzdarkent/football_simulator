@@ -11,6 +11,7 @@ const NAV = [
   { to: "/dashboard/trophies", label: "Trofi" },
   { to: "/dashboard/journey", label: "Perjalanan" },
   { to: "/dashboard/news", label: "Berita" },
+  { to: "/dashboard/fixtures", label: "Jadwal" },
   { to: "/dashboard/social", label: "Sosmed" },
   { to: "/dashboard/transfers", label: "Transfer" },
   { to: "/dashboard/standings", label: "Klasemen" },

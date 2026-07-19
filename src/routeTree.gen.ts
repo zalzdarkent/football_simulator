@@ -25,6 +25,7 @@ import { Route as DashboardNewsRouteImport } from './routes/dashboard.news'
 import { Route as DashboardMatchRouteImport } from './routes/dashboard.match'
 import { Route as DashboardLeaderboardRouteImport } from './routes/dashboard.leaderboard'
 import { Route as DashboardJourneyRouteImport } from './routes/dashboard.journey'
+import { Route as DashboardFixturesRouteImport } from './routes/dashboard.fixtures'
 
 const NewRoute = NewRouteImport.update({
   id: '/new',
@@ -106,12 +107,18 @@ const DashboardJourneyRoute = DashboardJourneyRouteImport.update({
   path: '/journey',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardFixturesRoute = DashboardFixturesRouteImport.update({
+  id: '/fixtures',
+  path: '/fixtures',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/new': typeof NewRoute
+  '/dashboard/fixtures': typeof DashboardFixturesRoute
   '/dashboard/journey': typeof DashboardJourneyRoute
   '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/match': typeof DashboardMatchRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/new': typeof NewRoute
+  '/dashboard/fixtures': typeof DashboardFixturesRoute
   '/dashboard/journey': typeof DashboardJourneyRoute
   '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/match': typeof DashboardMatchRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/new': typeof NewRoute
+  '/dashboard/fixtures': typeof DashboardFixturesRoute
   '/dashboard/journey': typeof DashboardJourneyRoute
   '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/match': typeof DashboardMatchRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/new'
+    | '/dashboard/fixtures'
     | '/dashboard/journey'
     | '/dashboard/leaderboard'
     | '/dashboard/match'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/new'
+    | '/dashboard/fixtures'
     | '/dashboard/journey'
     | '/dashboard/leaderboard'
     | '/dashboard/match'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/new'
+    | '/dashboard/fixtures'
     | '/dashboard/journey'
     | '/dashboard/leaderboard'
     | '/dashboard/match'
@@ -338,10 +350,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardJourneyRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/fixtures': {
+      id: '/dashboard/fixtures'
+      path: '/fixtures'
+      fullPath: '/dashboard/fixtures'
+      preLoaderRoute: typeof DashboardFixturesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
 interface DashboardRouteChildren {
+  DashboardFixturesRoute: typeof DashboardFixturesRoute
   DashboardJourneyRoute: typeof DashboardJourneyRoute
   DashboardLeaderboardRoute: typeof DashboardLeaderboardRoute
   DashboardMatchRoute: typeof DashboardMatchRoute
@@ -357,6 +377,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardFixturesRoute: DashboardFixturesRoute,
   DashboardJourneyRoute: DashboardJourneyRoute,
   DashboardLeaderboardRoute: DashboardLeaderboardRoute,
   DashboardMatchRoute: DashboardMatchRoute,

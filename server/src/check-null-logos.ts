@@ -1,4 +1,3 @@
-// Script to check which clubs have NULL logo_url
 import { query } from "./db.js";
 import dotenv from "dotenv";
 
